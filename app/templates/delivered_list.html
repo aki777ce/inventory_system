@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>納品済みリスト - 物品請求システム</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f0f2f5;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background-color: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #1a73e8;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .table-container {
+            max-height: 500px;  /* 10行程度の高さ */
+            overflow-y: auto;   /* 縦方向のスクロールを有効化 */
+            overflow-x: hidden; /* 横スクロールを無効化 */
+            margin-bottom: 20px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            table-layout: fixed;
+            min-width: auto;
+        }
+        thead {
+            position: sticky;
+            top: 0;
+            background-color: #f8f9fa;
+            z-index: 1;
+        }
+        thead tr {
+            box-shadow: 0 2px 2px rgba(0,0,0,0.1);
+        }
+        th, td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+            word-wrap: break-word;
+        }
+        th {
+            background-color: #f8f9fa;
+            font-weight: bold;
+            color: #444;
+        }
+        tr {
+            height: 50px;
+        }
+        tr:hover {
+            background-color: #f5f5f5;
+        }
+        .button-container {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            margin-top: 20px;
+            margin-bottom: 20px;
+        }
+        .button {
+            padding: 10px 20px;
+            background-color: #1a73e8;
+            color: white;
+            text-decoration: none;
+            border-radius: 4px;
+            transition: background-color 0.3s;
+        }
+        .button:hover {
+            background-color: #1557b0;
+        }
+        .home-button {
+            background-color: #34a853;
+        }
+        .home-button:hover {
+            background-color: #2d8a46;
+        }
+        .reason-cell {
+            max-width: 180px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .reason-cell:hover {
+            white-space: normal;
+            position: relative;
+        }
+        .reason-cell .full-text {
+            display: none;
+            position: absolute;
+            background: white;
+            border: 1px solid #ddd;
+            padding: 10px;
+            border-radius: 4px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+            z-index: 1000;
+            max-width: 300px;
+            white-space: normal;
+        }
+        .reason-cell:hover .full-text {
+            display: block;
+        }
+        /* 列幅の指定を調整 */
+        .col-date { width: 90px; }
+        .col-name { width: 100px; }
+        .col-item { width: 130px; }
+        .col-model { width: 90px; }
+        .col-quantity { width: 50px; }
+        .col-unit { width: 50px; }
+        .col-reason { width: 180px; }
+        
+        .alert {
+            padding: 15px;
+            margin-bottom: 20px;
+            border: 1px solid transparent;
+            border-radius: 4px;
+        }
+        .alert-success {
+            color: #155724;
+            background-color: #d4edda;
+            border-color: #c3e6cb;
+        }
+        .alert-danger {
+            color: #721c24;
+            background-color: #f8d7da;
+            border-color: #f5c6cb;
+        }
+        /* スクロールバーのスタイル */
+        .table-container::-webkit-scrollbar {
+            width: 10px;
+        }
+        .table-container::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 5px;
+        }
+        .table-container::-webkit-scrollbar-thumb {
+            background: #888;
+            border-radius: 5px;
+        }
+        .table-container::-webkit-scrollbar-thumb:hover {
+            background: #555;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>納品済みリスト</h1>
+
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="alert alert-{{ category }}">
+                        {{ message }}
+                    </div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+
+        <div class="table-container">
+            <table>
+                <thead>
+                    <tr>
+                        <th class="col-date">発注日</th>
+                        <th class="col-date">納品日</th>
+                        <th class="col-name">発注者</th>
+                        <th class="col-name">受取者</th>
+                        <th class="col-item">物品名</th>
+                        <th class="col-model">型番</th>
+                        <th class="col-quantity">個数</th>
+                        <th class="col-unit">単位</th>
+                        <th class="col-reason">発注理由</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for order in orders %}
+                    <tr>
+                        <td>{{ order.order_date }}</td>
+                        <td>{{ order.delivery_date }}</td>
+                        <td>{{ order.orderer }}</td>
+                        <td>{{ order.receiver }}</td>
+                        <td>{{ order.item_name }}</td>
+                        <td>{{ order.model_number }}</td>
+                        <td>{{ order.quantity }}</td>
+                        <td>{{ order.unit }}</td>
+                        <td class="reason-cell">
+                            {{ order.reason or '未記入' }}
+                            {% if order.reason %}
+                                <div class="full-text">{{ order.reason }}</div>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        
+        <div class="button-container">
+            <a href="{{ url_for('main.index') }}" class="button home-button">トップページに戻る</a>
+        </div>
+    </div>
+
+    <script>
+        // ページ読み込み時にスクロールを一番下に移動
+        window.onload = function() {
+            var container = document.querySelector('.table-container');
+            container.scrollTop = container.scrollHeight;
+        }
+    </script>
+</body>
+</html>

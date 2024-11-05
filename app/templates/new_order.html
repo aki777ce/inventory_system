@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>新規発注 - 物品請求システム</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f0f2f5;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background-color: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #1a73e8;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            color: #444;
+        }
+        input[type="text"],
+        input[type="number"],
+        input[type="date"],
+        select,
+        textarea {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+        .button-container {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            margin-top: 20px;
+        }
+        .button {
+            padding: 10px 20px;
+            background-color: #1a73e8;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            text-decoration: none;
+        }
+        .button:hover {
+            background-color: #1557b0;
+        }
+        .home-button {
+            background-color: #34a853;
+        }
+        .home-button:hover {
+            background-color: #2d8a46;
+        }
+        .alert {
+            padding: 15px;
+            margin-bottom: 20px;
+            border: 1px solid transparent;
+            border-radius: 4px;
+        }
+        .alert-success {
+            color: #155724;
+            background-color: #d4edda;
+            border-color: #c3e6cb;
+        }
+        .alert-danger {
+            color: #721c24;
+            background-color: #f8d7da;
+            border-color: #f5c6cb;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>新規発注</h1>
+
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="alert alert-{{ category }}">
+                        {{ message }}
+                    </div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+
+        <form method="POST">
+            <div class="form-group">
+                <label for="order_date">発注日</label>
+                <input type="date" id="order_date" name="order_date" required
+                       value="{{ today_date }}">
+            </div>
+
+            <div class="form-group">
+                <label for="orderer">発注者</label>
+                <select id="orderer" name="orderer" required>
+                    <option value="">選択してください</option>
+                    {% for staff in staff %}
+                    <option value="{{ staff.name }}">{{ staff.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label for="item_name">物品名</label>
+                <select id="item_name" name="item_name" required>
+                    <option value="">選択してください</option>
+                    {% for item in items %}
+                    <option value="{{ item.name }}">{{ item.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label for="model_number">型番</label>
+                <select id="model_number" name="model_number" required>
+                    <option value="">選択してください</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label for="quantity">個数</label>
+                <input type="number" id="quantity" name="quantity" min="1" required>
+            </div>
+
+            <div class="form-group">
+                <label for="unit">単位</label>
+                <select id="unit" name="unit" required>
+                    <option value="個">個</option>
+                    <option value="箱">箱</option>
+                    <option value="セット">セット</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label for="reason">発注理由</label>
+                <textarea id="reason" name="reason" rows="3"></textarea>
+            </div>
+
+            <div class="button-container">
+                <button type="submit" class="button">発注する</button>
+                <a href="{{ url_for('main.index') }}" class="button home-button">トップページに戻る</a>
+            </div>
+        </form>
+    </div>
+
+    <script>
+        document.getElementById('item_name').addEventListener('change', function() {
+            const itemName = this.value;
+            const modelSelect = document.getElementById('model_number');
+            
+            if (itemName) {
+                fetch(`/get_model_numbers/${itemName}`)
+                    .then(response => response.json())
+                    .then(data => {
+                        modelSelect.innerHTML = '<option value="">選択してください</option>';
+                        data.forEach(model => {
+                            const option = document.createElement('option');
+                            option.value = model.number;
+                            option.textContent = model.number;
+                            modelSelect.appendChild(option);
+                        });
+                    });
+            } else {
+                modelSelect.innerHTML = '<option value="">選択してください</option>';
+            }
+        });
+    </script>
+</body>
+</html>

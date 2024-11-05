@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>物品請求システム</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f0f2f5;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background-color: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #1a73e8;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .button-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 15px;
+        }
+        .main-buttons {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+            flex-wrap: wrap;
+            margin-bottom: 20px;
+        }
+        .button {
+            padding: 10px 20px;
+            background-color: #1a73e8;
+            color: white;
+            text-decoration: none;
+            border-radius: 4px;
+            transition: background-color 0.3s;
+            min-width: 150px;
+            text-align: center;
+        }
+        .button:hover {
+            background-color: #1557b0;
+        }
+        .button.admin {
+            background-color: #dc3545;
+            margin-top: 20px;
+        }
+        .button.admin:hover {
+            background-color: #c82333;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>物品請求システム</h1>
+        <div class="button-container">
+            <div class="main-buttons">
+                <a href="{{ url_for('main.new_order') }}" class="button">新規発注</a>
+                <a href="{{ url_for('main.order_list') }}" class="button">発注済みリスト</a>
+                <a href="{{ url_for('main.delivered_list') }}" class="button">納品済みリスト</a>
+            </div>
+            <a href="{{ url_for('main.admin') }}" class="button admin">管理ページ</a>
+        </div>
+    </div>
+</body>
+</html>
