@@ -1,0 +1,181 @@
+{% extends "base.html" %}
+
+{% block title %}レポート - 物品請求管理システム{% endblock %}
+
+{% block extra_head %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+{% endblock %}
+
+{% block content %}
+<div class="max-w-6xl mx-auto">
+    <h1 class="text-2xl font-bold mb-6">レポート</h1>
+
+    <!-- 期間選択 -->
+    <div class="bg-white rounded-lg shadow-md p-6 mb-6">
+        <form id="reportForm" class="flex items-end space-x-4">
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">
+                    開始日
+                </label>
+                <input type="date" name="start_date" id="startDate"
+                       value="{{ start_date }}"
+                       class="rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">
+                    終了日
+                </label>
+                <input type="date" name="end_date" id="endDate"
+                       value="{{ end_date }}"
+                       class="rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
+            </div>
+            <button type="submit"
+                    class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded transition duration-300">
+                表示更新
+            </button>
+        </form>
+    </div>
+
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+        <!-- 概要統計 -->
+        <div class="bg-white rounded-lg shadow-md p-6">
+            <h2 class="text-lg font-semibold mb-4">概要</h2>
+            <div class="grid grid-cols-2 gap-4">
+                <div class="text-center p-4 bg-blue-50 rounded-lg">
+                    <div class="text-sm text-gray-600">総発注件数</div>
+                    <div class="text-2xl font-bold text-blue-600">{{ stats.total_orders }}</div>
+                </div>
+                <div class="text-center p-4 bg-green-50 rounded-lg">
+                    <div class="text-sm text-gray-600">納品完了件数</div>
+                    <div class="text-2xl font-bold text-green-600">{{ stats.delivered_orders }}</div>
+                </div>
+                <div class="text-center p-4 bg-yellow-50 rounded-lg">
+                    <div class="text-sm text-gray-600">未納品件数</div>
+                    <div class="text-2xl font-bold text-yellow-600">{{ stats.pending_orders }}</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 分類別発注数グラフ -->
+        <div class="bg-white rounded-lg shadow-md p-6">
+            <h2 class="text-lg font-semibold mb-4">分類別発注数</h2>
+            <canvas id="categoryChart"></canvas>
+        </div>
+    </div>
+
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+        <!-- 発注者別統計グラフ -->
+        <div class="bg-white rounded-lg shadow-md p-6">
+            <h2 class="text-lg font-semibold mb-4">発注者別集計</h2>
+            <canvas id="requesterChart"></canvas>
+        </div>
+    </div>
+
+    <!-- 発注トップ10 -->
+    <div class="bg-white rounded-lg shadow-md p-6">
+        <h2 class="text-lg font-semibold mb-4">よく発注される物品（TOP10）</h2>
+        <div class="overflow-x-auto">
+            <table class="min-w-full divide-y divide-gray-200">
+                <thead class="bg-gray-50">
+                    <tr>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            順位
+                        </th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            物品名
+                        </th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            分類
+                        </th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            発注回数
+                        </th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            総発注数
+                        </th>
+                    </tr>
+                </thead>
+                <tbody class="bg-white divide-y divide-gray-200">
+                    {% for item in top_items %}
+                    <tr>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                            {{ loop.index }}
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                            {{ item.name }}
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                            {{ item.category }}
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                            {{ item.order_count }}回
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                            {{ item.total_quantity }}{{ item.unit }}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+{% block extra_js %}
+<script>
+// 分類別発注数グラフ
+const categoryCtx = document.getElementById('categoryChart').getContext('2d');
+new Chart(categoryCtx, {
+    type: 'pie',
+    data: {
+        labels: {{ category_stats.labels|tojson }},
+        datasets: [{
+            data: {{ category_stats.data|tojson }},
+            backgroundColor: [
+                '#3B82F6', '#10B981', '#F59E0B', '#EF4444',
+                '#8B5CF6', '#EC4899', '#6366F1', '#14B8A6'
+            ]
+        }]
+    },
+    options: {
+        responsive: true,
+        plugins: {
+            legend: {
+                position: 'right'
+            }
+        }
+    }
+});
+
+// 発注者別集計グラフ
+const requesterCtx = document.getElementById('requesterChart').getContext('2d');
+new Chart(requesterCtx, {
+    type: 'bar',
+    data: {
+        labels: {{ requester_stats.labels|tojson }},
+        datasets: [{
+            label: '発注件数',
+            data: {{ requester_stats.data|tojson }},
+            backgroundColor: '#3B82F6'
+        }]
+    },
+    options: {
+        responsive: true,
+        scales: {
+            y: {
+                beginAtZero: true
+            }
+        }
+    }
+});
+
+// 期間選択フォームの処理
+document.getElementById('reportForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    const startDate = document.getElementById('startDate').value;
+    const endDate = document.getElementById('endDate').value;
+    window.location.href = `{{ url_for('admin.report') }}?start_date=${startDate}&end_date=${endDate}`;
+});
+</script>
+{% endblock %}
+{% endblock %}

@@ -1,0 +1,227 @@
+{% extends "base.html" %}
+
+{% block title %}スタッフ管理 - 物品請求管理システム{% endblock %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto">
+    <div class="flex justify-between items-center mb-6">
+        <h1 class="text-2xl font-bold">スタッフ管理</h1>
+        <button onclick="openStaffModal()"
+                class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded">
+            新規スタッフ追加
+        </button>
+    </div>
+
+    <!-- スタッフ一覧テーブル -->
+    <div class="bg-white shadow-md rounded-lg overflow-hidden">
+        <table class="min-w-full divide-y divide-gray-200">
+            <thead class="bg-gray-50">
+                <tr>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer" onclick="sortTable('name')">
+                        名前 
+                        <span id="sort-name" class="ml-1">▼</span>
+                    </th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer" onclick="sortTable('date')">
+                        登録日
+                        <span id="sort-date" class="ml-1"></span>
+                    </th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        状態
+                    </th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        操作
+                    </th>
+                </tr>
+            </thead>
+            <tbody class="bg-white divide-y divide-gray-200">
+                {% for staff in staff_list %}
+                <tr data-name="{{ staff.name }}" data-date="{{ staff.created_at.strftime('%Y-%m-%d') }}">
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        {{ staff.name }}
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        {{ staff.created_at.strftime('%Y-%m-%d') }}
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        {% if staff.is_active %}
+                        <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">
+                            有効
+                        </span>
+                        {% else %}
+                        <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-red-100 text-red-800">
+                            無効
+                        </span>
+                        {% endif %}
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                        <button onclick="openStaffModal('{{ staff.id }}', '{{ staff.name }}')"
+                                class="text-indigo-600 hover:text-indigo-900 mr-3">
+                            編集
+                        </button>
+                        {% if staff.is_active %}
+                        <button onclick="toggleStaffStatus('{{ staff.id }}', false)"
+                                class="text-red-600 hover:text-red-900 mr-3">
+                            無効化
+                        </button>
+                        {% else %}
+                        <button onclick="toggleStaffStatus('{{ staff.id }}', true)"
+                                class="text-green-600 hover:text-green-900 mr-3">
+                            有効化
+                        </button>
+                        {% endif %}
+                        <button onclick="confirmDeleteStaff({{ staff.id }})"
+                                class="text-red-600 hover:text-red-900">
+                            削除
+                        </button>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <!-- モーダル -->
+    <div id="staffModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 hidden flex items-center justify-center">
+        <div class="bg-white rounded-lg p-8 max-w-md w-full mx-4">
+            <h2 id="modalTitle" class="text-xl font-bold mb-4">新規スタッフ追加</h2>
+            <form id="staffForm" method="POST" class="space-y-4">
+                <div>
+                    <label for="staffName" class="block text-sm font-medium text-gray-700">
+                        名前 <span class="text-red-500">*</span>
+                    </label>
+                    <input type="text" id="staffName" name="name" required
+                           class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
+                </div>
+                <div class="flex justify-end space-x-3">
+                    <button type="button" onclick="closeStaffModal()"
+                            class="bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded">
+                        キャンセル
+                    </button>
+                    <button type="submit"
+                            class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded">
+                        保存
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+let currentStaffId = null;
+let sortOrders = {
+    name: 'asc',
+    date: 'asc'
+};
+
+function openStaffModal(staffId = null, staffName = '') {
+    currentStaffId = staffId;
+    const modal = document.getElementById('staffModal');
+    const title = document.getElementById('modalTitle');
+    const form = document.getElementById('staffForm');
+    const nameInput = document.getElementById('staffName');
+
+    title.textContent = staffId ? 'スタッフ情報編集' : '新規スタッフ追加';
+    nameInput.value = staffName;
+    form.action = staffId 
+        ? "{{ url_for('admin.staff') }}/" + staffId 
+        : "{{ url_for('admin.staff') }}";
+
+    modal.classList.remove('hidden');
+}
+
+function closeStaffModal() {
+    const modal = document.getElementById('staffModal');
+    modal.classList.add('hidden');
+    currentStaffId = null;
+}
+
+function toggleStaffStatus(staffId, activate) {
+    if (!confirm(activate ? 'このスタッフを有効化しますか？' : 'このスタッフを無効化しますか？')) {
+        return;
+    }
+
+    fetch(`{{ url_for('admin.toggle_staff_status', staff_id='0') }}`.replace('0', staffId), {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+            active: activate
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            location.reload();
+        } else {
+            alert('操作に失敗しました。');
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('エラーが発生しました。');
+    });
+}
+
+function sortTable(column) {
+    const tbody = document.querySelector('tbody');
+    const rows = Array.from(tbody.querySelectorAll('tr'));
+    const sortIcon = document.getElementById(`sort-${column}`);
+    
+    // 他のソートアイコンをクリア
+    Object.keys(sortOrders).forEach(key => {
+        if (key !== column) {
+            document.getElementById(`sort-${key}`).textContent = '';
+        }
+    });
+
+    rows.sort((a, b) => {
+        const aValue = a.dataset[column];
+        const bValue = b.dataset[column];
+        
+        if (sortOrders[column] === 'asc') {
+            return aValue.localeCompare(bValue);
+        } else {
+            return bValue.localeCompare(aValue);
+        }
+    });
+
+    // ソート順を切り替えてアイコンを更新
+    if (sortOrders[column] === 'asc') {
+        sortOrders[column] = 'desc';
+        sortIcon.textContent = '▲';
+    } else {
+        sortOrders[column] = 'asc';
+        sortIcon.textContent = '▼';
+    }
+
+    // テーブルを再構築
+    rows.forEach(row => tbody.appendChild(row));
+}
+
+function confirmDeleteStaff(staffId) {
+    if (confirm('このスタッフを削除してもよろしいですか？\n※この操作は取り消せません。')) {
+        fetch(`{{ url_for('admin.delete_staff', staff_id='0') }}`.replace('0', staffId), {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        }).then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                location.reload();
+            } else {
+                alert(data.error || '削除に失敗しました。');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('エラーが発生しました。');
+        });
+    }
+}
+</script>
+{% endblock %}

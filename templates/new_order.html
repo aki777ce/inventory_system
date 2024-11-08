@@ -1,0 +1,180 @@
+{% extends "base.html" %}
+
+{% block title %}新規発注 - 物品請求管理システム{% endblock %}
+
+{% block extra_head %}
+<style>
+    .form-select {
+        background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e");
+        background-position: right 0.5rem center;
+        background-repeat: no-repeat;
+        background-size: 1.5em 1.5em;
+        padding-right: 2.5rem;
+        -webkit-appearance: none;
+        -moz-appearance: none;
+        appearance: none;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="max-w-2xl mx-auto bg-white rounded-lg shadow-md p-6">
+    <h1 class="text-2xl font-bold mb-6">新規発注</h1>
+    
+    <form method="POST" class="space-y-4">
+        <!-- 発注日 -->
+        <div>
+            <label class="block text-sm font-medium text-gray-700 mb-2">
+                発注日 <span class="text-red-500">*</span>
+            </label>
+            <input type="date" name="order_date" 
+                   value="{{ today }}"
+                   class="w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                   required>
+        </div>
+
+        <!-- 発注者 -->
+        <div>
+            <label class="block text-sm font-medium text-gray-700 mb-2">
+                発注者 <span class="text-red-500">*</span>
+            </label>
+            <select name="requester" id="requester"
+                    class="form-select w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                    required>
+                <option value="">選択してください</option>
+                {% for s in staff %}
+                    <option value="{{ s.id }}">{{ s.name }}</option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <!-- 分類 -->
+        <div>
+            <label class="block text-sm font-medium text-gray-700 mb-2">
+                分類 <span class="text-red-500">*</span>
+            </label>
+            <select name="category" id="category"
+                    class="form-select w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                    required>
+                <option value="">選択してください</option>
+                {% for c in categories %}
+                    <option value="{{ c.id }}">{{ c.name }}</option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <!-- 物品名 -->
+        <div>
+            <label class="block text-sm font-medium text-gray-700 mb-2">
+                物品名 <span class="text-red-500">*</span>
+            </label>
+            <select name="item" id="item"
+                    class="form-select w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                    required disabled>
+                <option value="">分類を選択してください</option>
+            </select>
+        </div>
+
+        <!-- 型番 -->
+        <div>
+            <label class="block text-sm font-medium text-gray-700 mb-2">
+                型番 <span class="text-red-500">*</span>
+            </label>
+            <select name="model_number" id="model_number"
+                    class="form-select w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                    required disabled>
+                <option value="">物品名を選択してください</option>
+            </select>
+        </div>
+
+        <!-- 数量 -->
+        <div>
+            <label class="block text-sm font-medium text-gray-700 mb-2">
+                数量 <span class="text-red-500">*</span>
+            </label>
+            <input type="number" name="quantity" min="1"
+                   class="w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                   inputmode="numeric" pattern="[0-9]*" required>
+        </div>
+
+        <!-- 単位 -->
+        <div>
+            <label class="block text-sm font-medium text-gray-700 mb-2">
+                単位 <span class="text-red-500">*</span>
+            </label>
+            <select name="unit"
+                    class="form-select w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                    required>
+                <option value="個">個</option>
+                <option value="箱">箱</option>
+                <option value="セット">セット</option>
+            </select>
+        </div>
+
+        <!-- 発注理由 -->
+        <div>
+            <label class="block text-sm font-medium text-gray-700 mb-2">
+                発注理由
+            </label>
+            <textarea name="reason" rows="3"
+                      class="w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"></textarea>
+        </div>
+
+        <div class="flex justify-between pt-4">
+            <button type="submit"
+                    class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline transition duration-300">
+                発注する
+            </button>
+            <a href="{{ url_for('index') }}"
+               class="bg-gray-500 hover:bg-gray-600 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline transition duration-300">
+                キャンセル
+            </a>
+        </div>
+    </form>
+</div>
+
+{% block extra_js %}
+<script>
+// 分類選択時の物品名の更新
+$('#category').change(function() {
+    const categoryId = $(this).val();
+    const itemSelect = $('#item');
+    const modelNumberSelect = $('#model_number');
+    
+    if (categoryId) {
+        $.get(`/get_items/${categoryId}`, function(items) {
+            itemSelect.empty().append('<option value="">物品名を選択してください</option>');
+            items.forEach(item => {
+                itemSelect.append(`<option value="${item.id}">${item.name}</option>`);
+            });
+            itemSelect.prop('disabled', false);
+        });
+    } else {
+        itemSelect.empty().append('<option value="">分類を選択してください</option>');
+        itemSelect.prop('disabled', true);
+        modelNumberSelect.empty().append('<option value="">物品名を選択してください</option>');
+        modelNumberSelect.prop('disabled', true);
+    }
+});
+
+// 物品名選択時の型番の更新
+$('#item').change(function() {
+    const itemId = $(this).val();
+    const modelNumberSelect = $('#model_number');
+    
+    if (itemId) {
+        $.get(`/get_model_numbers/${itemId}`, function(modelNumbers) {
+            modelNumberSelect.empty().append('<option value="">型番を選択してください</option>');
+            modelNumbers.forEach(mn => {
+                modelNumberSelect.append(`<option value="${mn.id}">${mn.number}</option>`);
+            });
+            modelNumberSelect.prop('disabled', false);
+        });
+    } else {
+        modelNumberSelect.empty().append('<option value="">物品名を選択してください</option>');
+        modelNumberSelect.prop('disabled', true);
+    }
+});
+</script>
+{% endblock %}
+{% endblock %}

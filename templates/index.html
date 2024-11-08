@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+
+{% block title %}トップページ - 物品請求管理システム{% endblock %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto">
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <a href="{{ url_for('new_order') }}" 
+           class="bg-blue-500 hover:bg-blue-600 text-white rounded-lg shadow-md p-6 text-center transition duration-300">
+            <div class="text-2xl mb-2">新規発注</div>
+            <div class="text-sm">新しい物品を発注します</div>
+        </a>
+        
+        <a href="{{ url_for('pending_orders') }}"
+           class="bg-yellow-500 hover:bg-yellow-600 text-white rounded-lg shadow-md p-6 text-center transition duration-300">
+            <div class="text-2xl mb-2">発注済みリスト</div>
+            <div class="text-sm">未納品の発注を確認します</div>
+        </a>
+        
+        <a href="{{ url_for('delivered_orders') }}"
+           class="bg-green-500 hover:bg-green-600 text-white rounded-lg shadow-md p-6 text-center transition duration-300">
+            <div class="text-2xl mb-2">納品済みリスト</div>
+            <div class="text-sm">納品済みの発注履歴を確認します</div>
+        </a>
+        
+        <a href="{{ url_for('admin.index') }}"
+           class="bg-purple-500 hover:bg-purple-600 text-white rounded-lg shadow-md p-6 text-center transition duration-300">
+            <div class="text-2xl mb-2">管理ページ</div>
+            <div class="text-sm">マスターデータを管理します</div>
+        </a>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,187 @@
+{% extends "base.html" %}
+
+{% block title %}分類管理 - 物品請求管理システム{% endblock %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto">
+    <div class="flex justify-between items-center mb-6">
+        <h1 class="text-2xl font-bold">分類管理</h1>
+        <button onclick="openCategoryModal()"
+                class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded">
+            新規分類追加
+        </button>
+    </div>
+
+    <!-- 分類一覧テーブル -->
+    <div class="bg-white shadow-md rounded-lg overflow-hidden">
+        <table class="min-w-full divide-y divide-gray-200">
+            <thead class="bg-gray-50">
+                <tr>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer" onclick="sortTable('name')">
+                        分類名
+                        <span id="sort-name" class="ml-1">▼</span>
+                    </th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        説明
+                    </th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer" onclick="sortTable('date')">
+                        登録日
+                        <span id="sort-date" class="ml-1"></span>
+                    </th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        操作
+                    </th>
+                </tr>
+            </thead>
+            <tbody class="bg-white divide-y divide-gray-200">
+                {% for category in categories %}
+                <tr data-name="{{ category.name }}" data-date="{{ category.created_at.strftime('%Y-%m-%d') }}">
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        {{ category.name }}
+                    </td>
+                    <td class="px-6 py-4">
+                        {{ category.description or '---' }}
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        {{ category.created_at.strftime('%Y-%m-%d') }}
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                        <button onclick="openCategoryModal('{{ category.id }}', '{{ category.name }}', '{{ category.description or '' }}')"
+                                class="text-indigo-600 hover:text-indigo-900 mr-3">
+                            編集
+                        </button>
+                        <button onclick="confirmDeleteCategory({{ category.id }})"
+                                class="text-red-600 hover:text-red-900">
+                            削除
+                        </button>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <!-- モーダル -->
+    <div id="categoryModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 hidden flex items-center justify-center">
+        <div class="bg-white rounded-lg p-8 max-w-md w-full mx-4">
+            <h2 id="modalTitle" class="text-xl font-bold mb-4">新規分類追加</h2>
+            <form id="categoryForm" method="POST" class="space-y-4">
+                <input type="hidden" id="categoryId" name="category_id">
+                <div>
+                    <label for="categoryName" class="block text-sm font-medium text-gray-700">
+                        分類名 <span class="text-red-500">*</span>
+                    </label>
+                    <input type="text" id="categoryName" name="name" required
+                           class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
+                </div>
+                <div>
+                    <label for="categoryDescription" class="block text-sm font-medium text-gray-700">
+                        説明
+                    </label>
+                    <textarea id="categoryDescription" name="description" rows="3"
+                              class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"></textarea>
+                </div>
+                <div class="flex justify-end space-x-3">
+                    <button type="button" onclick="closeCategoryModal()"
+                            class="bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded">
+                        キャンセル
+                    </button>
+                    <button type="submit"
+                            class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded">
+                        保存
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+let sortOrders = {
+    name: 'asc',
+    date: 'asc'
+};
+
+function openCategoryModal(categoryId = null, categoryName = '', categoryDescription = '') {
+    const modal = document.getElementById('categoryModal');
+    const title = document.getElementById('modalTitle');
+    const form = document.getElementById('categoryForm');
+    const idInput = document.getElementById('categoryId');
+    const nameInput = document.getElementById('categoryName');
+    const descInput = document.getElementById('categoryDescription');
+
+    title.textContent = categoryId ? '分類情報編集' : '新規分類追加';
+    idInput.value = categoryId || '';
+    nameInput.value = categoryName;
+    descInput.value = categoryDescription;
+    form.action = "{{ url_for('admin.categories') }}";
+
+    modal.classList.remove('hidden');
+}
+
+function closeCategoryModal() {
+    const modal = document.getElementById('categoryModal');
+    modal.classList.add('hidden');
+}
+
+function sortTable(column) {
+    const tbody = document.querySelector('tbody');
+    const rows = Array.from(tbody.querySelectorAll('tr'));
+    const sortIcon = document.getElementById(`sort-${column}`);
+    
+    // 他のソートアイコンをクリア
+    Object.keys(sortOrders).forEach(key => {
+        if (key !== column) {
+            document.getElementById(`sort-${key}`).textContent = '';
+        }
+    });
+
+    rows.sort((a, b) => {
+        const aValue = a.dataset[column];
+        const bValue = b.dataset[column];
+        
+        if (sortOrders[column] === 'asc') {
+            return aValue.localeCompare(bValue);
+        } else {
+            return bValue.localeCompare(aValue);
+        }
+    });
+
+    // ソート順を切り替えてアイコンを更新
+    if (sortOrders[column] === 'asc') {
+        sortOrders[column] = 'desc';
+        sortIcon.textContent = '▲';
+    } else {
+        sortOrders[column] = 'asc';
+        sortIcon.textContent = '▼';
+    }
+
+    // テーブルを再構築
+    rows.forEach(row => tbody.appendChild(row));
+}
+
+function confirmDeleteCategory(categoryId) {
+    if (confirm('この分類を削除してもよろしいですか？\n※関連する物品データがある場合は削除できません。')) {
+        fetch(`{{ url_for('admin.delete_category', category_id='0') }}`.replace('0', categoryId), {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        }).then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                location.reload();
+            } else {
+                alert(data.error || '削除に失敗しました。');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('エラーが発生しました。');
+        });
+    }
+}
+</script>
+{% endblock %}
