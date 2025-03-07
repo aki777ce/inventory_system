@@ -35,7 +35,7 @@
             </thead>
             <tbody class="bg-white divide-y divide-gray-200">
                 {% for category in categories %}
-                <tr data-name="{{ category.name }}" data-date="{{ category.created_at.strftime('%Y-%m-%d') }}">
+                <tr data-name="{{ category.name }}" data-date="{{ category.created_at.strftime('%Y-%m-%d') }}"　data-category-id="{{ category.id }}">
                     <td class="px-6 py-4 whitespace-nowrap">
                         {{ category.name }}
                     </td>
@@ -61,33 +61,30 @@
         </table>
     </div>
 
-    <!-- モーダル -->
+    <!-- 分類登録/編集モーダル -->
     <div id="categoryModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 hidden flex items-center justify-center">
         <div class="bg-white rounded-lg p-8 max-w-md w-full mx-4">
-            <h2 id="modalTitle" class="text-xl font-bold mb-4">新規分類追加</h2>
-            <form id="categoryForm" method="POST" class="space-y-4">
-                <input type="hidden" id="categoryId" name="category_id">
-                <div>
-                    <label for="categoryName" class="block text-sm font-medium text-gray-700">
+            <h2 id="modalTitle" class="text-xl font-bold mb-4">分類情報</h2>
+            <form id="categoryForm" action="{{ url_for('admin.categories') }}" method="POST">
+                <input type="hidden" name="category_id" id="categoryId">
+                <div class="mb-4">
+                    <label class="block mb-2">
                         分類名 <span class="text-red-500">*</span>
                     </label>
-                    <input type="text" id="categoryName" name="name" required
-                           class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
+                    <input type="text" name="name" id="categoryName" class="w-full border rounded px-3 py-2" required>
                 </div>
-                <div>
-                    <label for="categoryDescription" class="block text-sm font-medium text-gray-700">
-                        説明
-                    </label>
-                    <textarea id="categoryDescription" name="description" rows="3"
-                              class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"></textarea>
+                <div class="mb-4">
+                    <label class="block mb-2">説明</label>
+                    <textarea name="description" id="categoryDescription" class="w-full border rounded px-3 py-2 h-24"></textarea>
                 </div>
                 <div class="flex justify-end space-x-3">
-                    <button type="button" onclick="closeCategoryModal()"
-                            class="bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded">
+                    <button type="button" onclick="closeCategoryModal()" class="px-4 py-2 text-gray-600 hover:text-gray-800">
                         キャンセル
                     </button>
-                    <button type="submit"
-                            class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded">
+                    <button type="button" onclick="addItemForCategory()" class="px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600">
+                        この分類の物品を追加
+                    </button>
+                    <button type="submit" class="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600">
                         保存
                     </button>
                 </div>
@@ -99,38 +96,48 @@
 
 {% block extra_js %}
 <script>
+// ソート関連の変数と関数
 let sortOrders = {
     name: 'asc',
     date: 'asc'
 };
 
-function openCategoryModal(categoryId = null, categoryName = '', categoryDescription = '') {
+let editingCategoryId = null;
+
+function openCategoryModal(categoryId = null, name = '', description = '') {
+    editingCategoryId = categoryId;
     const modal = document.getElementById('categoryModal');
-    const title = document.getElementById('modalTitle');
     const form = document.getElementById('categoryForm');
+    const title = document.getElementById('modalTitle');
     const idInput = document.getElementById('categoryId');
     const nameInput = document.getElementById('categoryName');
     const descInput = document.getElementById('categoryDescription');
 
-    title.textContent = categoryId ? '分類情報編集' : '新規分類追加';
-    idInput.value = categoryId || '';
-    nameInput.value = categoryName;
-    descInput.value = categoryDescription;
-    form.action = "{{ url_for('admin.categories') }}";
+    // フォームの設定
+    if (categoryId) {
+        title.textContent = '分類編集';
+        idInput.value = categoryId;
+    } else {
+        title.textContent = '新規分類追加';
+        idInput.value = '';
+    }
 
+    nameInput.value = name;
+    descInput.value = description;
     modal.classList.remove('hidden');
 }
 
 function closeCategoryModal() {
     const modal = document.getElementById('categoryModal');
     modal.classList.add('hidden');
+    editingCategoryId = null;
 }
 
 function sortTable(column) {
     const tbody = document.querySelector('tbody');
     const rows = Array.from(tbody.querySelectorAll('tr'));
     const sortIcon = document.getElementById(`sort-${column}`);
-    
+
     // 他のソートアイコンをクリア
     Object.keys(sortOrders).forEach(key => {
         if (key !== column) {
@@ -141,7 +148,7 @@ function sortTable(column) {
     rows.sort((a, b) => {
         const aValue = a.dataset[column];
         const bValue = b.dataset[column];
-        
+
         if (sortOrders[column] === 'asc') {
             return aValue.localeCompare(bValue);
         } else {
@@ -183,5 +190,54 @@ function confirmDeleteCategory(categoryId) {
         });
     }
 }
+
+function addItemForCategory() {
+    const categoryId = document.getElementById('categoryId').value;
+    const form = document.getElementById('categoryForm');
+
+    if (!categoryId) {
+        // 新規分類の場合、まず分類を保存
+        const formData = new FormData(form);
+
+        fetch(form.action, {
+            method: 'POST',
+            body: formData
+        })
+        .then(response => {
+            if (!response.ok) {
+                throw new Error('分類の保存に失敗しました');
+            }
+            return response.text();
+        })
+        .then(() => {
+            // 保存成功したら物品管理ページへリダイレクト
+            // 新しい分類を選択した状態で物品追加モーダルを表示するためにクエリパラメータを追加
+            const categoryName = document.getElementById('categoryName').value;
+            alert('分類を保存しました。物品の登録画面に移動します。');
+            window.location.href = `/admin/items?new_category=${encodeURIComponent(categoryName)}`;
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert(error.message);
+        });
+    } else {
+        // 既存の分類の場合、直接物品管理ページへ
+        window.location.href = `/admin/items?category_id=${categoryId}`;
+    }
+}
+
+// モーダルの外側クリックで閉じる
+document.getElementById('categoryModal').addEventListener('click', function(event) {
+    if (event.target === this) {
+        closeCategoryModal();
+    }
+});
+
+// Escキーでモーダルを閉じる
+document.addEventListener('keydown', function(event) {
+    if (event.key === 'Escape') {
+        closeCategoryModal();
+    }
+});
 </script>
 {% endblock %}

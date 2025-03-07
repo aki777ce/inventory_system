@@ -1,6 +1,93 @@
 {% extends "base.html" %}
-
 {% block title %}納品済みリスト - 物品請求管理システム{% endblock %}
+
+{% block extra_css %}
+<style>
+    .table-container {
+        max-height: calc(100vh - 300px);
+        min-height: 400px;
+        overflow: auto;
+    }
+
+    .table-container::-webkit-scrollbar {
+        width: 8px;
+        height: 8px;
+    }
+
+    .table-container::-webkit-scrollbar-track {
+        background: #f1f1f1;
+    }
+
+    .table-container::-webkit-scrollbar-thumb {
+        background: #888;
+        border-radius: 4px;
+    }
+
+    .table-container::-webkit-scrollbar-thumb:hover {
+        background: #666;
+    }
+
+    .sticky-header {
+        position: sticky;
+        top: 0;
+        z-index: 10;
+    }
+
+    .table-min-width {
+        min-width: 1200px;
+    }
+
+    /* ソートボタンのスタイル */
+    .sort-header {
+        position: relative !important;
+    }
+    
+    .sort-header > div {
+        padding-right: 1.5rem;
+    }
+
+    .sort-mark {
+        position: absolute;
+        right: 6px;
+        top: 50%;
+        transform: translateY(-50%);
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+    }
+
+    .sort-mark::before,
+    .sort-mark::after {
+        content: '';
+        display: block;
+        width: 0;
+        height: 0;
+        border-left: 4px solid transparent;
+        border-right: 4px solid transparent;
+    }
+
+    .sort-mark::before {
+        border-bottom: 4px solid #666;
+    }
+
+    .sort-mark::after {
+        border-top: 4px solid #666;
+    }
+
+    .sort-header[data-sort-direction="asc"] .sort-mark::before {
+        border-bottom-color: #000;
+    }
+
+    .sort-header[data-sort-direction="desc"] .sort-mark::after {
+        border-top-color: #000;
+    }
+
+    .sort-header:hover .sort-mark::before,
+    .sort-header:hover .sort-mark::after {
+        opacity: 0.8;
+    }
+</style>
+{% endblock %}
 
 {% block content %}
 <div class="max-w-7xl mx-auto">
@@ -8,74 +95,89 @@
         <h1 class="text-2xl font-bold mb-4">納品済みリスト</h1>
         {% include 'search_form.html' %}
     </div>
-        
-        <div class="overflow-x-auto">
-            <table class="min-w-full divide-y divide-gray-200">
+
+    <div class="bg-white shadow-lg rounded-lg overflow-hidden">
+        <div class="table-container">
+            <table class="min-w-full table-min-width divide-y divide-gray-200">
                 <thead class="bg-gray-50">
-                    <tr>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                            発注日
+                    <tr class="sticky-header">
+                        <th scope="col" 
+                            class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-50 sort-header" 
+                            data-sort="order_date"
+                            onclick="toggleSort(this, 'order_date')">
+                            <div class="flex items-center">
+                                <span>発注日</span>
+                                <span class="sort-mark"></span>
+                            </div>
                         </th>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                            納品日
+                        <th scope="col" 
+                            class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-50 sort-header"
+                            data-sort="delivery_date"
+                            onclick="toggleSort(this, 'delivery_date')">
+                            <div class="flex items-center">
+                                <span>納品日</span>
+                                <span class="sort-mark"></span>
+                            </div>
                         </th>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-50">
                             所要日数
                         </th>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-50">
                             発注者
                         </th>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-50">
                             受取者
                         </th>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-50">
                             分類
                         </th>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-50">
                             物品名
                         </th>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-50">
                             型番
                         </th>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-50">
                             数量
                         </th>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-50">
                             発注理由
                         </th>
                     </tr>
                 </thead>
                 <tbody class="bg-white divide-y divide-gray-200">
                     {% for order in orders %}
-                    <tr>
-                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                            {{ order.order_date.strftime('%Y-%m-%d') }}
+                    <tr class="hover:bg-gray-50 transition duration-150"
+                        data-order-date="{{ order.order_date.strftime('%Y%m%d') }}"
+                        data-delivery-date="{{ order.delivery_date.strftime('%Y%m%d') if order.delivery_date else '99991231' }}">
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                            {{ order.order_date.strftime('%Y/%m/%d') }}
                         </td>
-                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                            {{ order.delivery_date.strftime('%Y-%m-%d') }}
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                            {{ order.delivery_date.strftime('%Y/%m/%d') if order.delivery_date else '---' }}
                         </td>
-                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                            {{ (order.delivery_date - order.order_date).days }}日
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                            {{ order.days_required }}日
                         </td>
-                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                             {{ order.requester.name }}
                         </td>
-                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                            {{ order.receiver.name }}
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                            {{ order.receiver.name if order.receiver else '---' }}
                         </td>
-                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                             {{ order.category.name }}
                         </td>
-                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                             {{ order.item.name }}
                         </td>
-                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                             {{ order.model_number.number }}
                         </td>
-                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                             {{ order.quantity }}{{ order.unit }}
                         </td>
-                        <td class="px-6 py-4 text-sm text-gray-900">
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                             {{ order.reason or '---' }}
                         </td>
                     </tr>
@@ -85,4 +187,54 @@
         </div>
     </div>
 </div>
+
+{% block extra_js %}
+<script>
+let currentSort = {
+    column: null,
+    direction: 'asc'
+};
+
+function toggleSort(header, column) {
+    // 前回のソートヘッダーからクラスを削除
+    if (currentSort.column) {
+        const prevHeader = document.querySelector(`[data-sort="${currentSort.column}"]`);
+        prevHeader.classList.remove('asc', 'desc');
+    }
+
+    // 同じカラムをクリックした場合は方向を切り替え、異なるカラムの場合は昇順から開始
+    if (currentSort.column === column) {
+        currentSort.direction = currentSort.direction === 'asc' ? 'desc' : 'asc';
+    } else {
+        currentSort.column = column;
+        currentSort.direction = 'asc';
+    }
+
+    // ヘッダーにソート方向の属性を設定
+    header.setAttribute('data-sort-direction', currentSort.direction);
+
+    // テーブルの行をソート
+    const tbody = document.querySelector('tbody');
+    const rows = Array.from(tbody.querySelectorAll('tr'));
+
+    rows.sort((a, b) => {
+        const aValue = a.getAttribute(`data-${column.replace(/_/g, '-')}`);
+        const bValue = b.getAttribute(`data-${column.replace(/_/g, '-')}`);
+        
+        return currentSort.direction === 'asc' 
+            ? aValue.localeCompare(bValue)
+            : bValue.localeCompare(aValue);
+    });
+
+    // ソートした行を再配置
+    rows.forEach(row => tbody.appendChild(row));
+}
+
+// ページ読み込み時に発注日で昇順ソート
+document.addEventListener('DOMContentLoaded', () => {
+    const orderDateHeader = document.querySelector('[data-sort="order_date"]');
+    toggleSort(orderDateHeader, 'order_date');
+});
+</script>
+{% endblock %}
 {% endblock %}

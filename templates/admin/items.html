@@ -12,309 +12,342 @@
     </div>
   </div>
 
-  {% for category in categories %}
-  <div class="bg-white shadow-md rounded-lg overflow-hidden mb-6">
-    <div class="bg-gray-50 px-6 py-3 border-b border-gray-200 flex justify-between items-center">
-      <h2 class="text-lg font-semibold">{{ category.name }}</h2>
-      <div>
-        <button onclick="openCategoryEditModal('{{ category.id }}', '{{ category.name }}')" class="text-blue-500 hover:text-blue-700">分類を編集</button>
-      </div>
-    </div>
 
-    <div class="px-6 py-3 border-b border-gray-200">
-      <div class="grid grid-cols-4 gap-4 font-semibold">
-        <div>物品名</div>
-        <div>型番</div>
-        <div>状態</div>
-        <div>操作</div>
-      </div>
-    </div>
 
-    {% for item in category.items %}
-    <div class="group hover:bg-gray-50 px-6 py-3 border-b border-gray-200">
-      <div class="grid grid-cols-4 gap-4 items-center">
-        <div>{{ item.name }}</div>
-        <div>
-          {% for model in item.model_numbers %}
-          <div class="{% if not model.is_active %}text-gray-400{% endif %}">
-            {{ model.number }}
-            {% if not model.is_active %}
-            <span class="text-red-500 text-xs">(無効)</span>
-            {% endif %}
-            <div class="ml-2 hidden group-hover:inline-flex space-x-2">
-              <button onclick="openModelNumberEditModal('{{ model.id }}', '{{ model.number }}')" class="text-blue-500 hover:text-blue-700">編集</button>
-              <button onclick="toggleModelNumberStatus('{{ model.id }}', {% if model.is_active %}false{% else %}true{% endif %})" class="{% if model.is_active %}text-yellow-500 hover:text-yellow-700{% else %}text-green-500 hover:text-green-700{% endif %}">
-                {% if model.is_active %}無効化{% else %}有効化{% endif %}
-              </button>
-              <button onclick="deleteModelNumber('{{ model.id }}')" class="text-red-500 hover:text-red-700">削除</button>
-            </div>
-          </div>
-          {% endfor %}
-        </div>
-        <div></div>
-        <div class="flex space-x-2">
-          <button onclick="deleteItem('{{ item.id }}')" class="text-red-500 hover:text-red-700">削除</button>
-        </div>
-      </div>
-    </div>
-    {% endfor %}
-  </div>
-  {% endfor %}
 
   <!-- 物品追加モーダル -->
-  <div id="itemModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 hidden flex items-center justify-center">
-    <div class="bg-white rounded-lg p-8 max-w-md w-full mx-4">
-      <h2 class="text-xl font-bold mb-4">物品追加</h2>
-      <form action="{{ url_for('admin.items') }}" method="POST">
-        <div class="mb-4">
-          <label class="block mb-2">
-            分類 <span class="text-red-500">*</span>
-          </label>
-          <select name="category_id" class="w-full border rounded px-3 py-2" required>
-            <option value="">選択してください</option>
-            {% for category in categories %}
-            <option value="{{ category.id }}">{{ category.name }}</option>
-            {% endfor %}
-          </select>
+    <div id="itemModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 hidden flex items-center justify-center">
+        <div class="bg-white rounded-lg p-8 max-w-md w-full mx-4">
+            <h2 class="text-xl font-bold mb-4">物品追加</h2>
+            <form id="itemForm" action="{{ url_for('admin.items') }}" method="POST">
+                <input type="hidden" name="item_id" id="itemId">
+                <div class="mb-4">
+                    <label class="block mb-2">
+                        分類 <span class="text-red-500">*</span>
+                    </label>
+                    <select name="category_id" id="itemCategory" class="w-full border rounded px-3 py-2" required>
+                        <option value="">選択してください</option>
+                        {% for category in categories %}
+                        <option value="{{ category.id }}" {% if selected_category_id == category.id %}selected{% endif %}>
+                            {{ category.name }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="mb-4">
+                    <label class="block mb-2">
+                        物品名 <span class="text-red-500">*</span>
+                    </label>
+                    <input type="text" name="name" id="itemName" class="w-full border rounded px-3 py-2" required>
+                </div>
+                <div class="flex justify-end space-x-3">
+                    <button type="button" onclick="closeItemModal()" class="px-4 py-2 text-gray-600 hover:text-gray-800">
+                        キャンセル
+                    </button>
+                    <button type="button" onclick="addModelNumberForItem()" class="px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600">
+                        この物品の型番を追加
+                    </button>
+                    <button type="submit" class="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600">
+                        保存
+                    </button>
+                </div>
+            </form>
         </div>
-        <div class="mb-4">
-          <label class="block mb-2">
-            物品名 <span class="text-red-500">*</span>
-          </label>
-          <input type="text" name="name" class="w-full border rounded px-3 py-2" required>
-        </div>
-        <div class="flex justify-end space-x-3">
-          <button type="button" onclick="closeItemModal()" class="px-4 py-2 text-gray-600 hover:text-gray-800">キャンセル</button>
-          <button type="submit" class="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600">保存</button>
-        </div>
-      </form>
     </div>
-  </div>
+
+{% for category in categories %}
+<div class="bg-white shadow-md rounded-lg overflow-hidden mb-6">
+    <div class="bg-gray-50 px-6 py-3 border-b border-gray-200">
+        <h2 class="text-lg font-semibold">{{ category.name }}</h2>
+    </div>
+    <table class="min-w-full divide-y divide-gray-200">
+        <thead>
+            <tr class="bg-gray-50">
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 w-1/3">物品名</th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 w-1/2">型番</th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 w-1/6">操作</th>
+            </tr>
+        </thead>
+        <tbody class="bg-white divide-y divide-gray-200">
+            {% for item in category.items %}
+            <tr>
+                <td class="px-6 py-4 whitespace-nowrap">
+                    <div class="text-sm text-gray-900">{{ item.name }}</div>
+                </td>
+<td class="px-6 py-4">
+    <div class="space-y-2">
+        {% for model in item.model_numbers %}
+        <div class="flex items-center justify-between text-sm">
+            <span class="text-gray-900">{{ model.number }}</span>
+            <button onclick="editModelNumber('{{ model.id }}', '{{ model.number }}', '{{ item.id }}', '{{ item.name }}')"
+                    class="text-orange-500 hover:text-orange-700">
+                編集
+            </button>
+        </div>
+        {% endfor %}
+    </div>
+</td>
+                <td class="px-6 py-4 whitespace-nowrap text-right text-sm">
+                    <button onclick="openModelNumberModal('{{ item.id }}', '{{ category.id }}', '{{ item.name }}')"
+        class="text-blue-500 hover:text-blue-700">
+    型番を追加
+</button>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endfor %}
 
   <!-- 型番追加モーダル -->
-  <div id="modelNumberModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 hidden flex items-center justify-center">
+<div id="modelNumberModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 hidden flex items-center justify-center">
     <div class="bg-white rounded-lg p-8 max-w-md w-full mx-4">
-      <h2 class="text-xl font-bold mb-4">型番追加</h2>
-      <form action="{{ url_for('admin.add_model_number') }}" method="POST">
-        <div class="mb-4">
-          <label class="block mb-2">
-            分類 <span class="text-red-500">*</span>
-          </label>
-          <select name="category_id" onchange="updateItems(this.value)" class="w-full border rounded px-3 py-2" required>
-            <option value="">選択してください</option>
-            {% for category in categories %}
-            <option value="{{ category.id }}">{{ category.name }}</option>
-            {% endfor %}
-          </select>
-        </div>
-        <div class="mb-4">
-          <label class="block mb-2">
-            物品名 <span class="text-red-500">*</span>
-          </label>
-          <select name="item_id" class="w-full border rounded px-3 py-2" required>
-            <option value="">分類を選択してください</option>
-          </select>
-        </div>
-        <div class="mb-4">
-          <label class="block mb-2">
-            型番 <span class="text-red-500">*</span>
-          </label>
-          <input type="text" name="number" class="w-full border rounded px-3 py-2" required>
-        </div>
-        <div class="flex justify-end space-x-3">
-          <button type="button" onclick="closeModelNumberModal()" class="px-4 py-2 text-gray-600 hover:text-gray-800">キャンセル</button>
-          <button type="submit" class="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600">保存</button>
-        </div>
-      </form>
+        <h2 class="text-xl font-bold mb-4">型番追加</h2>
+        <form action="{{ url_for('admin.add_model_number') }}" method="POST">
+            <div class="mb-4">
+                <label class="block mb-2">
+                    分類 <span class="text-red-500">*</span>
+                </label>
+                <select name="category_id" onchange="updateItems(this.value)" class="w-full border rounded px-3 py-2" required>
+                    <option value="">選択してください</option>
+                    {% for category in categories %}
+                    <option value="{{ category.id }}">{{ category.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="mb-4">
+                <label class="block mb-2">
+                    物品名 <span class="text-red-500">*</span>
+                </label>
+                <select name="item_id" class="w-full border rounded px-3 py-2" required disabled>
+                    <option value="">分類を選択してください</option>
+                </select>
+            </div>
+            <div class="mb-4">
+                <label class="block mb-2">
+                    型番 <span class="text-red-500">*</span>
+                </label>
+                <input type="text" name="number" class="w-full border rounded px-3 py-2" required>
+            </div>
+            <div class="flex justify-end space-x-3">
+                <button type="button" onclick="closeModelNumberModal()" class="px-4 py-2 text-gray-600 hover:text-gray-800">
+                    キャンセル
+                </button>
+                <button type="submit" class="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600">
+                    保存
+                </button>
+            </div>
+        </form>
     </div>
-  </div>
+</div>
 
-  <!-- 型番編集モーダル -->
-  <div id="modelNumberEditModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 hidden flex items-center justify-center">
+<!-- 型番編集モーダル -->
+<div id="modelNumberEditModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 hidden flex items-center justify-center">
     <div class="bg-white rounded-lg p-8 max-w-md w-full mx-4">
-      <h2 class="text-xl font-bold mb-4">型番編集</h2>
-      <form id="modelNumberEditForm" method="POST">
-        <div class="mb-4">
-          <label class="block mb-2">
-            型番 <span class="text-red-500">*</span>
-          </label>
-          <input type="text" name="number" class="w-full border rounded px-3 py-2" required>
-        </div>
-        <div class="flex justify-end space-x-3">
-          <button type="button" onclick="closeModelNumberEditModal()" class="px-4 py-2 text-gray-600 hover:text-gray-800">キャンセル</button>
-          <button type="submit" class="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600">保存</button>
-        </div>
-      </form>
+        <h2 class="text-xl font-bold mb-4">物品・型番編集</h2>
+        <form id="modelNumberEditForm" method="POST">
+            <!-- 物品名入力欄を追加 -->
+            <div class="mb-4">
+                <label class="block mb-2">
+                    物品名 <span class="text-red-500">*</span>
+                </label>
+                <input type="text" name="item_name" class="w-full border rounded px-3 py-2" required>
+            </div>
+            <div class="mb-4">
+                <label class="block mb-2">
+                    型番 <span class="text-red-500">*</span>
+                </label>
+                <input type="text" name="number" class="w-full border rounded px-3 py-2" required>
+            </div>
+            <div class="flex justify-end space-x-3">
+                <button type="button"
+                        onclick="deleteCurrentModelNumber()"
+                        class="px-4 py-2 text-red-600 hover:text-red-800">
+                    削除
+                </button>
+                <button type="button"
+                        onclick="closeModelNumberEditModal()"
+                        class="px-4 py-2 text-gray-600 hover:text-gray-800">
+                    キャンセル
+                </button>
+                <button type="submit"
+                        class="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600">
+                    保存
+                </button>
+            </div>
+        </form>
     </div>
-  </div>
+</div>
+
 
 {% endblock %}
 
 {% block extra_js %}
 <script>
+// 状態管理用の変数
+let currentModelId = null;
+let currentItemId = null;
+
 // モーダルを開く関数
 function openItemModal() {
-  document.getElementById('itemModal').classList.remove('hidden');
+    document.getElementById('itemModal').classList.remove('hidden');
 }
 
-function openModelNumberModal() {
-  document.getElementById('modelNumberModal').classList.remove('hidden');
-  // セレクトボックスをリセット
-  const categorySelect = document.querySelector('#modelNumberModal select[name="category_id"]');
-  const itemSelect = document.querySelector('#modelNumberModal select[name="item_id"]');
-  categorySelect.selectedIndex = 0;
-  itemSelect.innerHTML = '<option value="">分類を選択してください</option>';
+function openModelNumberModal(itemId = null, categoryId = null, itemName = null) {
+    const modal = document.getElementById('modelNumberModal');
+    const categorySelect = modal.querySelector('select[name="category_id"]');
+    const itemSelect = modal.querySelector('select[name="item_id"]');
+
+    if (categoryId && itemId) {
+        // 特定の物品からの呼び出しの場合
+        categorySelect.value = categoryId;
+
+        // 物品リストを更新して選択
+        updateItems(categoryId).then(() => {
+            itemSelect.value = itemId;
+        });
+
+        // 選択済みの項目を無効化（変更できないように）
+        categorySelect.disabled = true;
+        itemSelect.disabled = true;
+    } else {
+        // ヘッダーの「型番追加」ボタンからの呼び出しの場合
+        categorySelect.disabled = false;
+        itemSelect.disabled = true;
+        categorySelect.selectedIndex = 0;
+        itemSelect.innerHTML = '<option value="">分類を選択してください</option>';
+    }
+
+    modal.classList.remove('hidden');
 }
 
 // モーダルを閉じる関数
 function closeItemModal() {
-  document.getElementById('itemModal').classList.add('hidden');
-  // フォームをリセット
-  document.querySelector('#itemModal form').reset();
+    document.getElementById('itemModal').classList.add('hidden');
+    document.querySelector('#itemModal form').reset();
 }
 
 function closeModelNumberModal() {
-  document.getElementById('modelNumberModal').classList.add('hidden');
-  // フォームをリセット
-  document.querySelector('#modelNumberModal form').reset();
+    const modal = document.getElementById('modelNumberModal');
+    const form = modal.querySelector('form');
+    const categorySelect = form.querySelector('select[name="category_id"]');
+    const itemSelect = form.querySelector('select[name="item_id"]');
+
+    form.reset();
+    categorySelect.disabled = false;
+    itemSelect.disabled = true;
+    itemSelect.innerHTML = '<option value="">分類を選択してください</option>';
+    modal.classList.add('hidden');
 }
 
 // 型番編集モーダル関連
-function openModelNumberEditModal(modelId, number) {
-  const modal = document.getElementById('modelNumberEditModal');
-  const form = document.getElementById('modelNumberEditForm');
-  const input = form.querySelector('input[name="number"]');
-  
-  form.action = `/admin/model_numbers/${modelId}/edit`;
-  input.value = number;
-  modal.classList.remove('hidden');
+function editModelNumber(modelId, number, itemId, itemName) {
+    currentModelId = modelId;
+    currentItemId = itemId;
+    const modal = document.getElementById('modelNumberEditModal');
+    const form = document.getElementById('modelNumberEditForm');
+    const numberInput = form.querySelector('input[name="number"]');
+    const itemNameInput = form.querySelector('input[name="item_name"]');
+
+    form.action = `/admin/model_numbers/${modelId}/edit`;
+    numberInput.value = number;
+    itemNameInput.value = itemName;
+    modal.classList.remove('hidden');
 }
 
+// 型番編集モーダル関連
 function closeModelNumberEditModal() {
-  document.getElementById('modelNumberEditModal').classList.add('hidden');
-}
-
-// カテゴリ選択時の物品リスト更新
-function updateItems(categoryId) {
-  const itemSelect = document.querySelector('#modelNumberModal select[name="item_id"]');
-  if (categoryId) {
-    fetch(`/admin/get_category_items/${categoryId}`)
-      .then(response => response.json())
-      .then(items => {
-        itemSelect.innerHTML = items.length > 0 
-          ? items.map(item => `<option value="${item.id}">${item.name}</option>`).join('')
-          : '<option value="">物品が存在しません</option>';
-      })
-      .catch(error => {
-        console.error('Error:', error);
-        itemSelect.innerHTML = '<option value="">エラーが発生しました</option>';
-      });
-  } else {
-    itemSelect.innerHTML = '<option value="">分類を選択してください</option>';
-  }
-}
-
-// 物品削除
-function deleteItem(itemId) {
-  if (confirm('この物品を削除してもよろしいですか？')) {
-    fetch(`/admin/items/${itemId}/delete`, {
-      method: 'POST',
-      headers: {
-        'X-Requested-With': 'XMLHttpRequest'
-      }
-    })
-    .then(response => response.json())
-    .then(data => {
-      if (data.success) {
-        window.location.reload();
-      } else if (data.confirmRequired) {
-        if (confirm(data.error)) {
-          return fetch(`/admin/items/${itemId}/delete?force=true`, {
-            method: 'POST',
-            headers: {
-              'X-Requested-With': 'XMLHttpRequest'
-            }
-          }).then(response => {
-            if (response.ok) {
-              window.location.reload();
-            }
-          });
-        }
-      } else {
-        alert(data.error || '削除に失敗しました');
-      }
-    })
-    .catch(error => {
-      console.error('Error:', error);
-      alert('削除に失敗しました');
-    });
-  }
+    currentModelId = null;
+    const modal = document.getElementById('modelNumberEditModal');
+    modal.classList.add('hidden');
+    document.getElementById('modelNumberEditForm').reset();
 }
 
 // 型番削除
-function deleteModelNumber(modelId) {
-  if (confirm('この型番を削除してもよろしいですか？')) {
-    fetch(`/admin/model_numbers/${modelId}/delete`, {
-      method: 'POST',
-      headers: {
-        'X-Requested-With': 'XMLHttpRequest'
-      }
-    })
-    .then(response => response.json())
-    .then(data => {
-      if (data.success) {
-        window.location.reload();
-      } else {
-        alert(data.error || '削除に失敗しました');
-      }
-    })
-    .catch(error => {
-      console.error('Error:', error);
-      alert('削除に失敗しました');
-    });
-  }
+function deleteCurrentModelNumber() {
+    if (currentModelId && confirm('この型番を削除してもよろしいですか？')) {
+        fetch(`/admin/model_numbers/${currentModelId}/delete`, {
+            method: 'POST',
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest'
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                closeModelNumberEditModal();
+                window.location.reload();
+            } else {
+                alert(data.error || '削除に失敗しました');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('削除に失敗しました');
+        });
+    }
 }
 
-// 型番の有効/無効切り替え
-function toggleModelNumberStatus(modelId, active) {
-  fetch(`/admin/model_numbers/${modelId}/status`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'X-Requested-With': 'XMLHttpRequest'
-    },
-    body: JSON.stringify({ active: active })
-  })
-  .then(response => response.json())
-  .then(data => {
-    if (data.success) {
-      window.location.reload();
+// カテゴリ選択時の物品リスト更新
+async function updateItems(categoryId) {
+    const itemSelect = document.querySelector('#modelNumberModal select[name="item_id"]');
+    if (categoryId) {
+        try {
+            const response = await fetch(`/admin/get_category_items/${categoryId}`);
+            const items = await response.json();
+            itemSelect.innerHTML = items.length > 0
+                ? items.map(item => `<option value="${item.id}">${item.name}</option>`).join('')
+                : '<option value="">物品が存在しません</option>';
+            itemSelect.disabled = false;
+        } catch (error) {
+            console.error('Error:', error);
+            itemSelect.innerHTML = '<option value="">エラーが発生しました</option>';
+        }
     } else {
-      alert(data.error || '状態の更新に失敗しました');
+        itemSelect.innerHTML = '<option value="">分類を選択してください</option>';
+        itemSelect.disabled = true;
     }
-  })
-  .catch(error => {
-    console.error('Error:', error);
-    alert('状態の更新に失敗しました');
-  });
 }
 
 // モーダルの外側クリックで閉じる
 document.querySelectorAll('#itemModal, #modelNumberModal, #modelNumberEditModal').forEach(modal => {
-  modal.addEventListener('click', function(event) {
-    if (event.target === this) {
-      this.classList.add('hidden');
-    }
-  });
+    modal.addEventListener('click', function(event) {
+        if (event.target === this) {
+            if (modal.id === 'modelNumberEditModal') {
+                closeModelNumberEditModal();
+            } else if (modal.id === 'itemModal') {
+                closeItemModal();
+            } else {
+                closeModelNumberModal();
+            }
+        }
+    });
 });
 
 // Escキーでモーダルを閉じる
 document.addEventListener('keydown', function(event) {
-  if (event.key === 'Escape') {
-    document.querySelectorAll('#itemModal, #modelNumberModal, #modelNumberEditModal').forEach(modal => {
-      modal.classList.add('hidden');
-    });
-  }
+    if (event.key === 'Escape') {
+        closeItemModal();
+        closeModelNumberModal();
+        closeModelNumberEditModal();
+    }
+});
+
+// ページ読み込み時の処理
+document.addEventListener('DOMContentLoaded', function() {
+    // URLからカテゴリIDを取得
+    const urlParams = new URLSearchParams(window.location.search);
+    const categoryId = urlParams.get('category_id');
+
+    if (categoryId) {
+        // カテゴリIDがある場合、物品追加モーダルを開く
+        openItemModal();
+        const categorySelect = document.querySelector('#itemModal select[name="category_id"]');
+        if (categorySelect) {
+            categorySelect.value = categoryId;
+        }
+    }
 });
 </script>
 {% endblock %}

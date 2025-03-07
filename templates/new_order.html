@@ -1,180 +1,216 @@
 {% extends "base.html" %}
-
 {% block title %}新規発注 - 物品請求管理システム{% endblock %}
 
-{% block extra_head %}
+{% block extra_css %}
 <style>
-    .form-select {
-        background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e");
-        background-position: right 0.5rem center;
-        background-repeat: no-repeat;
-        background-size: 1.5em 1.5em;
-        padding-right: 2.5rem;
-        -webkit-appearance: none;
-        -moz-appearance: none;
-        appearance: none;
-    }
+.select2-container--default .select2-selection--single {
+    height: 38px;
+    border: 1px solid #e2e8f0;
+    border-radius: 0.25rem;
+}
+
+.select2-container--default .select2-selection--single .select2-selection__rendered {
+    line-height: 36px;
+    padding-left: 12px;
+}
+
+.select2-container--default .select2-selection--single .select2-selection__arrow {
+    height: 36px;
+}
+
+.select2-dropdown {
+    border: 1px solid #e2e8f0;
+    border-radius: 0.25rem;
+}
+
+.select2-search__field {
+    padding: 0.5rem !important;
+    border: 1px solid #e2e8f0 !important;
+    border-radius: 0.25rem !important;
+}
+
+.select2-results__option {
+    padding: 0.5rem !important;
+}
 </style>
 {% endblock %}
 
 {% block content %}
-<div class="max-w-2xl mx-auto bg-white rounded-lg shadow-md p-6">
-    <h1 class="text-2xl font-bold mb-6">新規発注</h1>
-    
-    <form method="POST" class="space-y-4">
-        <!-- 発注日 -->
-        <div>
-            <label class="block text-sm font-medium text-gray-700 mb-2">
-                発注日 <span class="text-red-500">*</span>
-            </label>
-            <input type="date" name="order_date" 
-                   value="{{ today }}"
-                   class="w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-                   required>
-        </div>
+<div class="max-w-4xl mx-auto">
+    <div class="mb-6">
+        <h1 class="text-2xl font-bold">新規発注</h1>
+        <h3 class="text-base font-normal">選択肢に物品がない場合には、管理ページで物品登録を行ってください</h3>
+    </div>
 
-        <!-- 発注者 -->
-        <div>
-            <label class="block text-sm font-medium text-gray-700 mb-2">
-                発注者 <span class="text-red-500">*</span>
-            </label>
-            <select name="requester" id="requester"
-                    class="form-select w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-                    required>
-                <option value="">選択してください</option>
-                {% for s in staff %}
-                    <option value="{{ s.id }}">{{ s.name }}</option>
-                {% endfor %}
-            </select>
-        </div>
+    <div class="bg-white shadow rounded-lg p-6">
+        <form method="POST">
+            <div class="mb-4">
+                <label class="block mb-2">
+                    発注日 <span class="text-red-500">*</span>
+                </label>
+                <input type="date" name="order_date" value="{{ today }}"
+                       class="w-full border rounded px-3 py-2" required>
+            </div>
 
-        <!-- 分類 -->
-        <div>
-            <label class="block text-sm font-medium text-gray-700 mb-2">
-                分類 <span class="text-red-500">*</span>
-            </label>
-            <select name="category" id="category"
-                    class="form-select w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-                    required>
-                <option value="">選択してください</option>
-                {% for c in categories %}
-                    <option value="{{ c.id }}">{{ c.name }}</option>
-                {% endfor %}
-            </select>
-        </div>
+            <div class="mb-4">
+                <label class="block mb-2">
+                    発注者 <span class="text-red-500">*</span>
+                </label>
+                <select name="requester" class="w-full border rounded px-3 py-2" required>
+                    <option value="">選択してください</option>
+                    {% for member in staff %}
+                    <option value="{{ member.id }}">{{ member.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
 
-        <!-- 物品名 -->
-        <div>
-            <label class="block text-sm font-medium text-gray-700 mb-2">
-                物品名 <span class="text-red-500">*</span>
-            </label>
-            <select name="item" id="item"
-                    class="form-select w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-                    required disabled>
-                <option value="">分類を選択してください</option>
-            </select>
-        </div>
+            <div class="mb-4">
+                <label class="block mb-2">
+                    分類 <span class="text-red-500">*</span>
+                </label>
+                <select name="category" id="category-select" class="w-full border rounded px-3 py-2" required>
+                    <option value="">選択してください</option>
+                    {% for category in categories %}
+                    <option value="{{ category.id }}">{{ category.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
 
-        <!-- 型番 -->
-        <div>
-            <label class="block text-sm font-medium text-gray-700 mb-2">
-                型番 <span class="text-red-500">*</span>
-            </label>
-            <select name="model_number" id="model_number"
-                    class="form-select w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-                    required disabled>
-                <option value="">物品名を選択してください</option>
-            </select>
-        </div>
+            <div class="mb-4">
+                <label class="block mb-2">
+                    物品名 <span class="text-red-500">*</span>
+                </label>
+                <select name="item" id="item-select" class="w-full border rounded px-3 py-2" required disabled>
+                    <option value="">分類を選択してください</option>
+                </select>
+            </div>
 
-        <!-- 数量 -->
-        <div>
-            <label class="block text-sm font-medium text-gray-700 mb-2">
-                数量 <span class="text-red-500">*</span>
-            </label>
-            <input type="number" name="quantity" min="1"
-                   class="w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-                   inputmode="numeric" pattern="[0-9]*" required>
-        </div>
+            <div class="mb-4">
+                <label class="block mb-2">
+                    型番 <span class="text-red-500">*</span>
+                </label>
+                <select name="model_number" id="model-select" class="w-full border rounded px-3 py-2" required disabled>
+                    <option value="">物品を選択してください</option>
+                </select>
+            </div>
 
-        <!-- 単位 -->
-        <div>
-            <label class="block text-sm font-medium text-gray-700 mb-2">
-                単位 <span class="text-red-500">*</span>
-            </label>
-            <select name="unit"
-                    class="form-select w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-                    required>
-                <option value="個">個</option>
-                <option value="箱">箱</option>
-                <option value="セット">セット</option>
-            </select>
-        </div>
+            <div class="mb-4">
+                <label class="block mb-2">
+                    数量 <span class="text-red-500">*</span>
+                </label>
+                <input type="number" name="quantity" min="1"
+                       class="w-full border rounded px-3 py-2" required>
+            </div>
 
-        <!-- 発注理由 -->
-        <div>
-            <label class="block text-sm font-medium text-gray-700 mb-2">
-                発注理由
-            </label>
-            <textarea name="reason" rows="3"
-                      class="w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"></textarea>
-        </div>
+            <div class="mb-4">
+                <label class="block mb-2">
+                    単位 <span class="text-red-500">*</span>
+                </label>
+                <select name="unit" class="w-full border rounded px-3 py-2" required>
+                    <option value="">選択してください</option>
+                    <option value="個">個</option>
+                    <option value="本">本</option>
+                    <option value="箱">箱</option>
+                    <option value="セット">セット</option>
+                    <option value="台">台</option>
+                </select>
+            </div>
 
-        <div class="flex justify-between pt-4">
-            <button type="submit"
-                    class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline transition duration-300">
-                発注する
-            </button>
-            <a href="{{ url_for('index') }}"
-               class="bg-gray-500 hover:bg-gray-600 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline transition duration-300">
-                キャンセル
-            </a>
-        </div>
-    </form>
+            <div class="mb-6">
+                <label class="block mb-2">
+                    発注理由
+                </label>
+                <textarea name="reason"
+                          class="w-full border rounded px-3 py-2 h-24 resize-none"></textarea>
+            </div>
+
+            <div class="flex justify-end">
+                <button type="submit" class="bg-blue-500 hover:bg-blue-600 text-white px-6 py-2 rounded">
+                    発注する
+                </button>
+            </div>
+        </form>
+    </div>
 </div>
+{% endblock %}
 
 {% block extra_js %}
 <script>
-// 分類選択時の物品名の更新
-$('#category').change(function() {
-    const categoryId = $(this).val();
-    const itemSelect = $('#item');
-    const modelNumberSelect = $('#model_number');
-    
-    if (categoryId) {
-        $.get(`/get_items/${categoryId}`, function(items) {
-            itemSelect.empty().append('<option value="">物品名を選択してください</option>');
-            items.forEach(item => {
-                itemSelect.append(`<option value="${item.id}">${item.name}</option>`);
-            });
-            itemSelect.prop('disabled', false);
-        });
-    } else {
-        itemSelect.empty().append('<option value="">分類を選択してください</option>');
-        itemSelect.prop('disabled', true);
-        modelNumberSelect.empty().append('<option value="">物品名を選択してください</option>');
-        modelNumberSelect.prop('disabled', true);
-    }
-});
+$(document).ready(function() {
+    // 分類の Select2 初期化
+    $('#category-select').select2({
+        placeholder: "分類名で検索...",
+        allowClear: true,
+        language: {
+            noResults: function() {
+                return "該当する分類が見つかりません";
+            }
+        }
+    });
 
-// 物品名選択時の型番の更新
-$('#item').change(function() {
-    const itemId = $(this).val();
-    const modelNumberSelect = $('#model_number');
-    
-    if (itemId) {
-        $.get(`/get_model_numbers/${itemId}`, function(modelNumbers) {
-            modelNumberSelect.empty().append('<option value="">型番を選択してください</option>');
-            modelNumbers.forEach(mn => {
-                modelNumberSelect.append(`<option value="${mn.id}">${mn.number}</option>`);
-            });
-            modelNumberSelect.prop('disabled', false);
-        });
-    } else {
-        modelNumberSelect.empty().append('<option value="">物品名を選択してください</option>');
-        modelNumberSelect.prop('disabled', true);
-    }
+    // 物品の Select2 初期化
+    $('#item-select').select2({
+        placeholder: "物品名で検索...",
+        allowClear: true,
+        language: {
+            noResults: function() {
+                return "該当する物品が見つかりません";
+            }
+        }
+    });
+
+    // 型番の Select2 初期化
+    $('#model-select').select2({
+        placeholder: "型番で検索...",
+        allowClear: true,
+        language: {
+            noResults: function() {
+                return "該当する型番が見つかりません";
+            }
+        }
+    });
+
+    // 分類選択時の物品リスト更新
+    $('#category-select').on('change', function() {
+        const categoryId = $(this).val();
+        const itemSelect = $('#item-select');
+        const modelSelect = $('#model-select');
+
+        itemSelect.empty().prop('disabled', !categoryId);
+        modelSelect.empty().prop('disabled', true);
+
+        if (categoryId) {
+            fetch(`/get_items/${categoryId}`)
+                .then(response => response.json())
+                .then(items => {
+                    itemSelect.append(new Option('物品を選択してください', ''));
+                    items.forEach(item => {
+                        itemSelect.append(new Option(item.name, item.id));
+                    });
+                    itemSelect.trigger('change');
+                });
+        }
+    });
+
+    // 物品選択時の型番リスト更新
+    $('#item-select').on('change', function() {
+        const itemId = $(this).val();
+        const modelSelect = $('#model-select');
+
+        modelSelect.empty().prop('disabled', !itemId);
+
+        if (itemId) {
+            fetch(`/get_model_numbers/${itemId}`)
+                .then(response => response.json())
+                .then(models => {
+                    modelSelect.append(new Option('型番を選択してください', ''));
+                    models.forEach(model => {
+                        modelSelect.append(new Option(model.number, model.id));
+                    });
+                    modelSelect.trigger('change');
+                });
+        }
+    });
 });
 </script>
-{% endblock %}
 {% endblock %}
