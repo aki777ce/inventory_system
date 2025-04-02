@@ -1,7 +1,7 @@
 from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify
 from models import db, Staff, Category, Item, ModelNumber, Order
 from datetime import datetime, timedelta
-from sqlalchemy import func, desc
+from sqlalchemy import func, desc, or_
 
 # 管理者用Blueprint
 admin_bp = Blueprint('admin', __name__, url_prefix='/admin')
@@ -73,8 +73,12 @@ def toggle_staff_status(staff_id):
     """スタッフの有効/無効切り替え"""
     staff = Staff.query.get_or_404(staff_id)
     try:
-        data = request.get_json()
-        staff.is_active = data.get('active', not staff.is_active)
+        # FormDataからデータを取得
+        active_value = request.form.get('active')
+        # 文字列の'true'または'false'をブール値に変換
+        is_active = active_value.lower() == 'true' if active_value is not None else not staff.is_active
+        
+        staff.is_active = is_active
         db.session.commit()
         return jsonify({'success': True})
     except Exception as e:
@@ -460,33 +464,124 @@ def register_main_routes(app):
     @app.route('/pending_orders')
     def pending_orders():
         """発注済みリスト"""
-        query = Order.query.select_from(Order).filter_by(delivery_status='未納品')
-        query = apply_search_filters(query)
-        query = query.order_by(Order.order_date.desc())
-
-        staff = Staff.query.filter_by(is_active=True).order_by(Staff.name).all()
-        categories = Category.query.order_by(Category.name).all()
-
-        return render_template('pending_orders.html',
-                             orders=query.all(),
-                             staffs=staff,
-                             categories=categories,
-                             today=datetime.now().strftime('%Y-%m-%d'))
+        try:
+            # 基本クエリ
+            query = db.session.query(Order).filter(Order.delivery_status == '未納品')
+            
+            # 検索条件の適用
+            # 期間検索
+            start_date = request.args.get('start_date')
+            if start_date:
+                query = query.filter(Order.order_date >= start_date)
+            
+            end_date = request.args.get('end_date')
+            if end_date:
+                query = query.filter(Order.order_date <= end_date)
+            
+            # スタッフ検索
+            requester_id = request.args.get('requester_id')
+            if requester_id:
+                query = query.filter(Order.requester_id == requester_id)
+            
+            # 分類検索
+            category_id = request.args.get('category_id')
+            if category_id:
+                query = query.filter(Order.category_id == category_id)
+            
+            # フリーワード検索
+            keyword = request.args.get('keyword')
+            if keyword:
+                search_term = f"%{keyword}%"
+                query = query.join(ModelNumber, Order.model_number_id == ModelNumber.id).join(Item, ModelNumber.item_id == Item.id).join(Staff, Order.requester_id == Staff.id).outerjoin(Category, Item.category_id == Category.id).filter(
+                    or_(
+                        Item.name.ilike(search_term),
+                        ModelNumber.number.ilike(search_term),
+                        Order.reason.ilike(search_term),
+                        Staff.name.ilike(search_term),
+                        Category.name.ilike(search_term)
+                    )
+                )
+            
+            # 並び順（新しい順）
+            query = query.order_by(desc(Order.order_date))
+            
+            # クエリ実行
+            orders = query.all()
+            
+            # 関連データの取得
+            staff = db.session.query(Staff).filter(Staff.is_active == True).order_by(Staff.name).all()
+            categories = db.session.query(Category).order_by(Category.name).all()
+            
+            # テンプレートのレンダリング
+            return render_template('pending_orders.html',
+                                orders=orders,
+                                staffs=staff,
+                                categories=categories,
+                                today=datetime.now().strftime('%Y-%m-%d'))
+        except Exception as e:
+            # エラーをログに記録
+            app.logger.error(f"Error in pending_orders: {str(e)}")
+            # 最小限のテンプレートを返す
+            return f"発注済みリストの読み込み中にエラーが発生しました: {str(e)}", 500
 
     @app.route('/delivered_orders')
     def delivered_orders():
         """納品済みリスト"""
-        query = Order.query.select_from(Order).filter_by(delivery_status='納品済み')
-        query = apply_search_filters(query)
-        query = query.order_by(Order.order_date.desc())
-
-        staff = Staff.query.filter_by(is_active=True).order_by(Staff.name).all()
-        categories = Category.query.order_by(Category.name).all()
-
-        return render_template('delivered_orders.html',
-                             orders=query.all(),
-                             staffs=staff,
-                             categories=categories)
+        try:
+            # 基本クエリ
+            query = db.session.query(Order).filter(Order.delivery_status == '納品済み')
+            
+            # 検索条件の適用
+            # 期間検索
+            start_date = request.args.get('start_date')
+            if start_date:
+                query = query.filter(Order.delivery_date >= start_date)
+            
+            end_date = request.args.get('end_date')
+            if end_date:
+                query = query.filter(Order.delivery_date <= end_date)
+            
+            # スタッフ検索
+            requester_id = request.args.get('requester_id')
+            if requester_id:
+                query = query.filter(Order.requester_id == requester_id)
+            
+            # 分類検索
+            category_id = request.args.get('category_id')
+            if category_id:
+                query = query.join(ModelNumber, Order.model_number_id == ModelNumber.id).join(Item, ModelNumber.item_id == Item.id).filter(Item.category_id == category_id)
+            
+            # フリーワード検索
+            keyword = request.args.get('keyword')
+            if keyword:
+                search_term = f"%{keyword}%"
+                query = query.join(ModelNumber, Order.model_number_id == ModelNumber.id).join(Item, ModelNumber.item_id == Item.id).join(Staff, Order.requester_id == Staff.id).outerjoin(Category, Item.category_id == Category.id).filter(
+                    or_(
+                        Item.name.ilike(search_term),
+                        ModelNumber.number.ilike(search_term),
+                        Order.reason.ilike(search_term),
+                        Staff.name.ilike(search_term),
+                        Category.name.ilike(search_term)
+                    )
+                )
+            
+            # クエリ実行
+            orders = query.all()
+            
+            # 関連データの取得
+            staff = db.session.query(Staff).filter(Staff.is_active == True).order_by(Staff.name).all()
+            categories = db.session.query(Category).order_by(Category.name).all()
+            
+            # テンプレートのレンダリング
+            return render_template('delivered_orders.html',
+                                orders=orders,
+                                staffs=staff,
+                                categories=categories)
+        except Exception as e:
+            # エラーをログに記録
+            app.logger.error(f"Error in delivered_orders: {str(e)}")
+            # 最小限のテンプレートを返す
+            return f"納品済みリストの読み込み中にエラーが発生しました: {str(e)}", 500
 
     @app.route('/get_items/<int:category_id>')
     def get_items(category_id):
@@ -534,38 +629,61 @@ def register_main_routes(app):
         except Exception as e:
             db.session.rollback()
             flash('納品処理に失敗しました。', 'error')
-            print(f"Error in mark_as_delivered: {str(e)}")  # デバッグ用
+            app.logger.error(f"Error in mark_as_delivered: {str(e)}")
 
         return redirect(url_for('pending_orders'))
 
+    @app.route('/cancel_order/<int:order_id>', methods=['POST'])
+    def cancel_order(order_id):
+        """発注取り消し処理"""
+        try:
+            order = Order.query.get_or_404(order_id)
+            
+            # 発注取り消し処理
+            db.session.delete(order)
+            db.session.commit()
+            flash('発注を取り消しました。', 'success')
+        except Exception as e:
+            db.session.rollback()
+            flash('発注の取り消しに失敗しました。', 'error')
+            app.logger.error(f"Error in cancel_order: {str(e)}")
+        
+        # エラーが発生しても、リダイレクトは行う
+        return redirect(url_for('pending_orders'))
 
-def apply_search_filters(query):
-    """検索フィルターを適用する共通関数"""
-    # 期間検索
-    if request.args.get('start_date'):
-        query = query.filter(Order.order_date >= datetime.strptime(request.args.get('start_date'), '%Y-%m-%d'))
-    if request.args.get('end_date'):
-        query = query.filter(Order.order_date <= datetime.strptime(request.args.get('end_date'), '%Y-%m-%d'))
+    def apply_search_filters(query):
+        """検索フィルターを適用する共通関数"""
+        try:
+            # 期間検索
+            if request.args.get('start_date'):
+                query = query.filter(Order.order_date >= datetime.strptime(request.args.get('start_date'), '%Y-%m-%d'))
+            if request.args.get('end_date'):
+                query = query.filter(Order.order_date <= datetime.strptime(request.args.get('end_date'), '%Y-%m-%d'))
 
-    # スタッフ検索
-    if request.args.get('staff_id'):
-        query = query.filter(Order.requester_id == request.args.get('staff_id'))
+            # スタッフ検索
+            if request.args.get('requester_id'):
+                query = query.filter(Order.requester_id == request.args.get('requester_id'))
 
-    # 分類検索
-    if request.args.get('category_id'):
-        query = query.filter(Order.category_id == request.args.get('category_id'))
+            # 分類検索
+            if request.args.get('category_id'):
+                query = query.filter(Order.category_id == request.args.get('category_id'))
 
-    # キーワード検索
-    if request.args.get('keyword'):
-        keyword = f"%{request.args.get('keyword')}%"
-        query = query.join(Item, Order.item_id == Item.id)\
-                    .join(ModelNumber, Item.id == ModelNumber.item_id)\
-                    .filter(
-                        db.or_(
-                            Item.name.ilike(keyword),
-                            ModelNumber.number.ilike(keyword),
-                            Order.reason.ilike(keyword)
-                        )
+            # キーワード検索
+            if request.args.get('keyword'):
+                keyword = f"%{request.args.get('keyword')}%"
+                # 結合クエリを単純化
+                query = query.join(Item, Order.item_id == Item.id)
+                query = query.outerjoin(ModelNumber, Item.id == ModelNumber.item_id)
+                query = query.filter(
+                    db.or_(
+                        Item.name.ilike(keyword),
+                        db.or_(ModelNumber.number.ilike(keyword), ModelNumber.number == None),
+                        Order.reason.ilike(keyword)
                     )
-
-    return query
+                )
+            
+            return query
+        except Exception as e:
+            app.logger.error(f"Error in apply_search_filters: {str(e)}")
+            # エラーが発生した場合は元のクエリをそのまま返す
+            return query

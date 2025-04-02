@@ -13,10 +13,10 @@
         </div>
         <div>
             <label class="block text-sm font-medium text-gray-700 mb-1">スタッフ</label>
-            <select name="staff_id" class="w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
+            <select name="requester_id" class="w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
                 <option value="">全て</option>
                 {% for staff in staffs %}
-                <option value="{{ staff.id }}" {% if request.args.get('staff_id')|int == staff.id %}selected{% endif %}>
+                <option value="{{ staff.id }}" {% if request.args.get('requester_id')|int == staff.id %}selected{% endif %}>
                     {{ staff.name }}
                 </option>
                 {% endfor %}

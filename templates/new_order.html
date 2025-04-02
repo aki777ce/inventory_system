@@ -44,6 +44,7 @@
 
     <div class="bg-white shadow rounded-lg p-6">
         <form method="POST">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <div class="mb-4">
                 <label class="block mb-2">
                     発注日 <span class="text-red-500">*</span>

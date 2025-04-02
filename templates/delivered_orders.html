@@ -230,10 +230,12 @@ function toggleSort(header, column) {
     rows.forEach(row => tbody.appendChild(row));
 }
 
-// ページ読み込み時に発注日で昇順ソート
+// ページ読み込み時に納品日で降順ソート
 document.addEventListener('DOMContentLoaded', () => {
-    const orderDateHeader = document.querySelector('[data-sort="order_date"]');
-    toggleSort(orderDateHeader, 'order_date');
+    const deliveryDateHeader = document.querySelector('[data-sort="delivery_date"]');
+    toggleSort(deliveryDateHeader, 'delivery_date');
+    // 2回目のクリックで降順にする
+    toggleSort(deliveryDateHeader, 'delivery_date');
 });
 </script>
 {% endblock %}

@@ -12,6 +12,9 @@ def create_app():
     # データベースの初期化
     db.init_app(app)
 
+    # CSRFの初期化
+    csrf.init_app(app)
+
     with app.app_context():
         # Blueprintの登録
         from routes import admin_bp

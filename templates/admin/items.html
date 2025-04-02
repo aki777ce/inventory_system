@@ -20,6 +20,7 @@
         <div class="bg-white rounded-lg p-8 max-w-md w-full mx-4">
             <h2 class="text-xl font-bold mb-4">物品追加</h2>
             <form id="itemForm" action="{{ url_for('admin.items') }}" method="POST">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 <input type="hidden" name="item_id" id="itemId">
                 <div class="mb-4">
                     <label class="block mb-2">
@@ -105,6 +106,7 @@
     <div class="bg-white rounded-lg p-8 max-w-md w-full mx-4">
         <h2 class="text-xl font-bold mb-4">型番追加</h2>
         <form action="{{ url_for('admin.add_model_number') }}" method="POST">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <div class="mb-4">
                 <label class="block mb-2">
                     分類 <span class="text-red-500">*</span>
@@ -147,7 +149,7 @@
     <div class="bg-white rounded-lg p-8 max-w-md w-full mx-4">
         <h2 class="text-xl font-bold mb-4">物品・型番編集</h2>
         <form id="modelNumberEditForm" method="POST">
-            <!-- 物品名入力欄を追加 -->
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <div class="mb-4">
                 <label class="block mb-2">
                     物品名 <span class="text-red-500">*</span>
@@ -267,11 +269,13 @@ function closeModelNumberEditModal() {
 // 型番削除
 function deleteCurrentModelNumber() {
     if (currentModelId && confirm('この型番を削除してもよろしいですか？')) {
+        // CSRFトークンを含むFormDataを作成
+        const formData = new FormData();
+        formData.append('csrf_token', '{{ csrf_token() }}');
+        
         fetch(`/admin/model_numbers/${currentModelId}/delete`, {
             method: 'POST',
-            headers: {
-                'X-Requested-With': 'XMLHttpRequest'
-            }
+            body: formData
         })
         .then(response => response.json())
         .then(data => {
@@ -308,6 +312,44 @@ async function updateItems(categoryId) {
         itemSelect.innerHTML = '<option value="">分類を選択してください</option>';
         itemSelect.disabled = true;
     }
+}
+
+// 物品追加モーダルから型番追加モーダルを開く関数
+function addModelNumberForItem() {
+    const itemForm = document.getElementById('itemForm');
+    const categoryId = itemForm.querySelector('select[name="category_id"]').value;
+    const itemName = itemForm.querySelector('input[name="name"]').value;
+    
+    // 必須項目が入力されているか確認
+    if (!categoryId || !itemName) {
+        alert('分類と物品名を入力してください。');
+        return;
+    }
+    
+    // まず物品を保存
+    const formData = new FormData(itemForm);
+    
+    fetch(itemForm.action, {
+        method: 'POST',
+        body: formData,
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest'
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            // 物品保存成功後、型番追加モーダルを開く
+            closeItemModal();
+            openModelNumberModal(data.item_id, categoryId, itemName);
+        } else {
+            alert(data.error || '物品の保存に失敗しました。');
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('エラーが発生しました。');
+    });
 }
 
 // モーダルの外側クリックで閉じる

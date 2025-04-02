@@ -66,6 +66,7 @@
         <div class="bg-white rounded-lg p-8 max-w-md w-full mx-4">
             <h2 id="modalTitle" class="text-xl font-bold mb-4">分類情報</h2>
             <form id="categoryForm" action="{{ url_for('admin.categories') }}" method="POST">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 <input type="hidden" name="category_id" id="categoryId">
                 <div class="mb-4">
                     <label class="block mb-2">
@@ -171,11 +172,13 @@ function sortTable(column) {
 
 function confirmDeleteCategory(categoryId) {
     if (confirm('この分類を削除してもよろしいですか？\n※関連する物品データがある場合は削除できません。')) {
+        // CSRFトークンを含むFormDataを作成
+        const formData = new FormData();
+        formData.append('csrf_token', '{{ csrf_token() }}');
+        
         fetch(`{{ url_for('admin.delete_category', category_id='0') }}`.replace('0', categoryId), {
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            }
+            body: formData
         }).then(response => response.json())
         .then(data => {
             if (data.success) {

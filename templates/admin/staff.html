@@ -85,6 +85,7 @@
         <div class="bg-white rounded-lg p-8 max-w-md w-full mx-4">
             <h2 id="modalTitle" class="text-xl font-bold mb-4">新規スタッフ追加</h2>
             <form id="staffForm" method="POST" class="space-y-4">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 <div>
                     <label for="staffName" class="block text-sm font-medium text-gray-700">
                         名前 <span class="text-red-500">*</span>
@@ -143,14 +144,14 @@ function toggleStaffStatus(staffId, activate) {
         return;
     }
 
+    // CSRFトークンを含むFormDataを作成
+    const formData = new FormData();
+    formData.append('csrf_token', '{{ csrf_token() }}');
+    formData.append('active', activate);
+
     fetch(`{{ url_for('admin.toggle_staff_status', staff_id='0') }}`.replace('0', staffId), {
         method: 'POST',
-        headers: {
-            'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-            active: activate
-        })
+        body: formData
     })
     .then(response => response.json())
     .then(data => {
@@ -204,11 +205,13 @@ function sortTable(column) {
 
 function confirmDeleteStaff(staffId) {
     if (confirm('このスタッフを削除してもよろしいですか？\n※この操作は取り消せません。')) {
+        // CSRFトークンを含むFormDataを作成
+        const formData = new FormData();
+        formData.append('csrf_token', '{{ csrf_token() }}');
+        
         fetch(`{{ url_for('admin.delete_staff', staff_id='0') }}`.replace('0', staffId), {
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            }
+            body: formData
         }).then(response => response.json())
         .then(data => {
             if (data.success) {
