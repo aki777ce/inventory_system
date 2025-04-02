@@ -93,6 +93,8 @@
                 <select name="model_number" id="model-select" class="w-full border rounded px-3 py-2" required disabled>
                     <option value="">物品を選択してください</option>
                 </select>
+                <div id="model-notes" class="mt-2 text-sm text-gray-600 bg-gray-100 p-2 rounded hidden"></div>
+                <div id="model-image" class="mt-2 hidden"></div>
             </div>
 
             <div class="mb-4">
@@ -138,6 +140,16 @@
 {% block extra_js %}
 <script>
 $(document).ready(function() {
+    // グローバル変数で型番データを保持
+    let modelNumbersData = {};
+
+    // デバッグ用のエラーハンドリング
+    window.onerror = function(message, source, lineno, colno, error) {
+        console.log('エラー発生:', message);
+        console.log('詳細:', error);
+        return false;
+    };
+
     // 分類の Select2 初期化
     $('#category-select').select2({
         placeholder: "分類名で検索...",
@@ -197,19 +209,74 @@ $(document).ready(function() {
     $('#item-select').on('change', function() {
         const itemId = $(this).val();
         const modelSelect = $('#model-select');
+        const modelNotes = $('#model-notes');
 
         modelSelect.empty().prop('disabled', !itemId);
+        modelNotes.addClass('hidden').text('');
 
         if (itemId) {
             fetch(`/get_model_numbers/${itemId}`)
                 .then(response => response.json())
                 .then(models => {
+                    // グローバル変数にデータを保存
+                    modelNumbersData = {};
+                    models.forEach(model => {
+                        modelNumbersData[model.id] = model;
+                    });
+                    
+                    console.log('取得した型番データ:', modelNumbersData);
+                    
                     modelSelect.append(new Option('型番を選択してください', ''));
                     models.forEach(model => {
-                        modelSelect.append(new Option(model.number, model.id));
+                        try {
+                            console.log('型番データ:', model);
+                            const option = new Option(model.number, model.id);
+                            modelSelect.append(option);
+                        } catch (err) {
+                            console.error('型番オプション作成エラー:', err);
+                        }
                     });
                     modelSelect.trigger('change');
                 });
+        }
+    });
+
+    // 型番選択時の備考表示
+    $('#model-select').on('change', function() {
+        try {
+            const modelId = $(this).val();
+            const modelNotes = $('#model-notes');
+            const modelImage = $('#model-image');
+            
+            console.log('選択された型番ID:', modelId);
+            console.log('保存されている型番データ:', modelNumbersData);
+            
+            if (modelId && modelNumbersData[modelId]) {
+                // 備考表示
+                if (modelNumbersData[modelId].notes) {
+                    const notes = modelNumbersData[modelId].notes;
+                    modelNotes.text('備考: ' + notes).removeClass('hidden');
+                    console.log('表示する備考:', notes);
+                } else {
+                    modelNotes.addClass('hidden').text('');
+                    console.log('備考なし');
+                }
+                
+                // 画像表示
+                if (modelNumbersData[modelId].image_path) {
+                    modelImage.html(`<img src="/static/${modelNumbersData[modelId].image_path}" class="max-w-full h-auto border rounded" alt="型番画像">`);
+                    modelImage.removeClass('hidden');
+                    console.log('表示する画像:', modelNumbersData[modelId].image_path);
+                } else {
+                    modelImage.addClass('hidden').html('');
+                    console.log('画像なし');
+                }
+            } else {
+                modelNotes.addClass('hidden').text('');
+                modelImage.addClass('hidden').html('');
+            }
+        } catch (err) {
+            console.error('備考表示エラー:', err);
         }
     });
 });

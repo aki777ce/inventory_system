@@ -2,6 +2,10 @@ from flask import Blueprint, render_template, request, redirect, url_for, flash,
 from models import db, Staff, Category, Item, ModelNumber, Order
 from datetime import datetime, timedelta
 from sqlalchemy import func, desc, or_
+import os
+import time
+from werkzeug.utils import secure_filename
+from flask import current_app
 
 # 管理者用Blueprint
 admin_bp = Blueprint('admin', __name__, url_prefix='/admin')
@@ -265,9 +269,26 @@ def add_model_number():
     """型番の追加"""
     item_id = request.form.get('item_id')
     number = request.form.get('number')
+    notes = request.form.get('notes')
+    
+    # 画像ファイルの処理
+    image_path = None
+    if 'image' in request.files:
+        file = request.files['image']
+        if file and file.filename and file.filename != '':
+            # 安全なファイル名に変換
+            filename = secure_filename(f"{item_id}_{number}_{int(time.time())}.{file.filename.rsplit('.', 1)[1].lower()}")
+            upload_folder = os.path.join(current_app.static_folder, 'images', 'model_images')
+            
+            # アップロードディレクトリがなければ作成
+            os.makedirs(upload_folder, exist_ok=True)
+            
+            file_path = os.path.join(upload_folder, filename)
+            file.save(file_path)
+            image_path = f"images/model_images/{filename}"
 
     try:
-        new_model = ModelNumber(item_id=item_id, number=number)
+        new_model = ModelNumber(item_id=item_id, number=number, notes=notes, image_path=image_path)
         db.session.add(new_model)
         db.session.commit()
         flash('型番を追加しました。', 'success')
@@ -284,6 +305,28 @@ def edit_model_number(model_id):
     try:
         # 型番の更新
         model.number = request.form.get('number')
+        model.notes = request.form.get('notes')
+        
+        # 画像ファイルの処理
+        if 'image' in request.files:
+            file = request.files['image']
+            if file and file.filename and file.filename != '':
+                # 古い画像ファイルの削除
+                if model.image_path:
+                    old_file_path = os.path.join(current_app.static_folder, model.image_path)
+                    if os.path.exists(old_file_path):
+                        os.remove(old_file_path)
+                
+                # 新しい画像ファイルの保存
+                filename = secure_filename(f"{model.item_id}_{model.number}_{int(time.time())}.{file.filename.rsplit('.', 1)[1].lower()}")
+                upload_folder = os.path.join(current_app.static_folder, 'images', 'model_images')
+                
+                # アップロードディレクトリがなければ作成
+                os.makedirs(upload_folder, exist_ok=True)
+                
+                file_path = os.path.join(upload_folder, filename)
+                file.save(file_path)
+                model.image_path = f"images/model_images/{filename}"
 
         # 物品名の更新
         item = Item.query.get(model.item_id)
@@ -329,15 +372,6 @@ def toggle_model_number_status(model_id):
     except Exception as e:
         db.session.rollback()
         return jsonify({'success': False, 'error': str(e)}), 400
-
-@admin_bp.route('/get_category_items/<int:category_id>')
-def get_category_items(category_id):
-    """カテゴリーに基づく物品リスト取得API"""
-    items = Item.query.filter_by(
-        category_id=category_id,
-        is_active=True
-    ).order_by(Item.name).all()
-    return jsonify([{'id': item.id, 'name': item.name} for item in items])
 
 @admin_bp.route('/report')
 def report():
@@ -425,11 +459,13 @@ def report():
 
 # メインアプリケーションのルート
 def register_main_routes(app):
+    """メインアプリケーションのルートを登録する"""
+    
     @app.route('/')
     def index():
         """トップページ"""
         return render_template('index.html')
-
+    
     @app.route('/new_order', methods=['GET', 'POST'])
     def new_order():
         """新規発注ページ"""
@@ -486,7 +522,7 @@ def register_main_routes(app):
             # 分類検索
             category_id = request.args.get('category_id')
             if category_id:
-                query = query.filter(Order.category_id == category_id)
+                query = query.join(ModelNumber, Order.model_number_id == ModelNumber.id).join(Item, ModelNumber.item_id == Item.id).filter(Item.category_id == category_id)
             
             # フリーワード検索
             keyword = request.args.get('keyword')
@@ -593,7 +629,7 @@ def register_main_routes(app):
     def get_model_numbers(item_id):
         """型番リスト取得API"""
         model_numbers = ModelNumber.query.filter_by(item_id=item_id, is_active=True).all()
-        return jsonify([{'id': mn.id, 'number': mn.number} for mn in model_numbers])
+        return jsonify([{'id': mn.id, 'number': mn.number, 'notes': mn.notes, 'image_path': mn.image_path} for mn in model_numbers])
 
     @app.route('/mark_as_delivered/<int:order_id>', methods=['POST'])
     def mark_as_delivered(order_id):
@@ -652,7 +688,7 @@ def register_main_routes(app):
         return redirect(url_for('pending_orders'))
 
     def apply_search_filters(query):
-        """検索フィルターを適用する共通関数"""
+        """検索フィルタを適用する共通関数"""
         try:
             # 期間検索
             if request.args.get('start_date'):

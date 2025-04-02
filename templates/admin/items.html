@@ -79,8 +79,20 @@
     <div class="space-y-2">
         {% for model in item.model_numbers %}
         <div class="flex items-center justify-between text-sm">
-            <span class="text-gray-900">{{ model.number }}</span>
+            <div>
+                <span class="text-gray-900">{{ model.number }}</span>
+                {% if model.notes %}
+                <p class="text-xs text-gray-500 mt-1">{{ model.notes }}</p>
+                {% endif %}
+                {% if model.image_path %}
+                <div class="mt-1">
+                    <img src="{{ url_for('static', filename=model.image_path) }}" alt="{{ model.number }}の画像" class="h-12 w-auto border rounded">
+                </div>
+                {% endif %}
+            </div>
             <button onclick="editModelNumber('{{ model.id }}', '{{ model.number }}', '{{ item.id }}', '{{ item.name }}')"
+                    data-notes="{{ model.notes|default('') }}"
+                    data-image-path="{{ model.image_path|default('') }}"
                     class="text-orange-500 hover:text-orange-700">
                 編集
             </button>
@@ -105,7 +117,7 @@
 <div id="modelNumberModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 hidden flex items-center justify-center">
     <div class="bg-white rounded-lg p-8 max-w-md w-full mx-4">
         <h2 class="text-xl font-bold mb-4">型番追加</h2>
-        <form action="{{ url_for('admin.add_model_number') }}" method="POST">
+        <form action="{{ url_for('admin.add_model_number') }}" method="POST" enctype="multipart/form-data">
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <div class="mb-4">
                 <label class="block mb-2">
@@ -132,6 +144,18 @@
                 </label>
                 <input type="text" name="number" class="w-full border rounded px-3 py-2" required>
             </div>
+            <div class="mb-4">
+                <label class="block mb-2">
+                    備考
+                </label>
+                <textarea name="notes" class="w-full border rounded px-3 py-2" rows="3"></textarea>
+            </div>
+            <div class="mb-4">
+                <label class="block mb-2">
+                    画像
+                </label>
+                <input type="file" name="image" accept="image/*" class="w-full border rounded px-3 py-2">
+            </div>
             <div class="flex justify-end space-x-3">
                 <button type="button" onclick="closeModelNumberModal()" class="px-4 py-2 text-gray-600 hover:text-gray-800">
                     キャンセル
@@ -148,7 +172,7 @@
 <div id="modelNumberEditModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 hidden flex items-center justify-center">
     <div class="bg-white rounded-lg p-8 max-w-md w-full mx-4">
         <h2 class="text-xl font-bold mb-4">物品・型番編集</h2>
-        <form id="modelNumberEditForm" method="POST">
+        <form id="modelNumberEditForm" method="POST" enctype="multipart/form-data">
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <div class="mb-4">
                 <label class="block mb-2">
@@ -161,6 +185,22 @@
                     型番 <span class="text-red-500">*</span>
                 </label>
                 <input type="text" name="number" class="w-full border rounded px-3 py-2" required>
+            </div>
+            <div class="mb-4">
+                <label class="block mb-2">
+                    備考
+                </label>
+                <textarea name="notes" class="w-full border rounded px-3 py-2" rows="3"></textarea>
+            </div>
+            <div class="mb-4">
+                <label class="block mb-2">
+                    画像
+                </label>
+                <input type="file" name="image" accept="image/*" class="w-full border rounded px-3 py-2">
+                <div id="current-image" class="mt-2 hidden">
+                    <p class="text-sm text-gray-600 mb-1">現在の画像:</p>
+                    <img id="current-image-preview" src="" alt="現在の画像" class="max-w-full h-auto border rounded">
+                </div>
             </div>
             <div class="flex justify-end space-x-3">
                 <button type="button"
@@ -251,10 +291,27 @@ function editModelNumber(modelId, number, itemId, itemName) {
     const form = document.getElementById('modelNumberEditForm');
     const numberInput = form.querySelector('input[name="number"]');
     const itemNameInput = form.querySelector('input[name="item_name"]');
+    const notesInput = form.querySelector('textarea[name="notes"]');
+    const currentImageDiv = document.getElementById('current-image');
+    const currentImagePreview = document.getElementById('current-image-preview');
+
+    // ボタンから備考欄と画像パスの値を取得
+    const notes = event.currentTarget.getAttribute('data-notes');
+    const imagePath = event.currentTarget.getAttribute('data-image-path');
 
     form.action = `/admin/model_numbers/${modelId}/edit`;
     numberInput.value = number;
     itemNameInput.value = itemName;
+    notesInput.value = notes || '';
+    
+    // 現在の画像があれば表示
+    if (imagePath) {
+        currentImagePreview.src = `/static/${imagePath}`;
+        currentImageDiv.classList.remove('hidden');
+    } else {
+        currentImageDiv.classList.add('hidden');
+    }
+    
     modal.classList.remove('hidden');
 }
 

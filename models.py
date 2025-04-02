@@ -63,6 +63,8 @@ class ModelNumber(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     number = db.Column(db.String(100), nullable=False)
     item_id = db.Column(db.Integer, db.ForeignKey('items.id'), nullable=False)
+    notes = db.Column(db.Text)
+    image_path = db.Column(db.String(255))  # 画像パスを保存するフィールド
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     is_active = db.Column(db.Boolean, default=True)
 
