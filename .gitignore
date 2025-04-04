@@ -5,3 +5,6 @@ instance/
 venv/
 *.db
 config.py
+
+# Local Netlify folder
+.netlify
