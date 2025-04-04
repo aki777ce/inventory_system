@@ -5,6 +5,7 @@ instance/
 venv/
 *.db
 config.py
+credentials.json
 
 # Local Netlify folder
 .netlify
